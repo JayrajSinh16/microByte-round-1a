@@ -1,0 +1,8 @@
+PyMuPDF
+numpy
+python-rapidjson
+regex
+scikit-learn
+joblib
+Pillow
+pytesseract
