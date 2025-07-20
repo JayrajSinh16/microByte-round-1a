@@ -1,36 +1,16 @@
-2025-07-20 12:31:00,875 - utils - INFO - Processing: test_data/file05.pdf
-2025-07-20 12:31:00,900 - utils - INFO - PDF Analysis: False (standard)
-2025-07-20 12:31:00,901 - utils - INFO - Loading ML engine...
-2025-07-20 12:31:00,951 - utils - INFO - Processed with ML engine
-2025-07-20 12:31:16,653 - utils - INFO - Processing: C:\Users\jayra\Desktop\Adobe_hackathon\pdf-outline-extractor\test_data\file01.pdf
-2025-07-20 12:31:16,681 - utils - INFO - PDF Analysis: True (standard)
-2025-07-20 12:31:16,991 - utils - INFO - Processed with rule engine
-2025-07-20 12:31:16,999 - utils - INFO - Processing: C:\Users\jayra\Desktop\Adobe_hackathon\pdf-outline-extractor\test_data\file02.pdf
-2025-07-20 12:31:17,071 - utils - INFO - PDF Analysis: False (standard)
-2025-07-20 12:31:17,071 - utils - INFO - Loading ML engine...
-2025-07-20 12:31:17,251 - utils - INFO - Processed with ML engine
-2025-07-20 12:31:17,251 - utils - INFO - Processing: C:\Users\jayra\Desktop\Adobe_hackathon\pdf-outline-extractor\test_data\file03.pdf
-2025-07-20 12:31:17,317 - utils - INFO - PDF Analysis: False (standard)
-2025-07-20 12:31:17,403 - utils - INFO - Processed with ML engine
-2025-07-20 12:31:17,403 - utils - INFO - Processing: C:\Users\jayra\Desktop\Adobe_hackathon\pdf-outline-extractor\test_data\file04.pdf
-2025-07-20 12:31:17,463 - utils - INFO - PDF Analysis: False (standard)
-2025-07-20 12:31:17,523 - utils - INFO - Processed with ML engine
-2025-07-20 12:31:17,529 - utils - INFO - Processing: C:\Users\jayra\Desktop\Adobe_hackathon\pdf-outline-extractor\test_data\file05.pdf
-2025-07-20 12:31:17,547 - utils - INFO - PDF Analysis: False (standard)
-2025-07-20 12:31:17,568 - utils - INFO - Processed with ML engine
-2025-07-20 13:45:59,600 - utils - INFO - Processing: C:\Users\jayra\Desktop\Adobe_hackathon\pdf-outline-extractor\test_data\file01.pdf
-2025-07-20 13:45:59,644 - utils - INFO - PDF Analysis: True (standard)
-2025-07-20 13:45:59,952 - utils - INFO - Processed with rule engine
-2025-07-20 13:45:59,952 - utils - INFO - Processing: C:\Users\jayra\Desktop\Adobe_hackathon\pdf-outline-extractor\test_data\file02.pdf
-2025-07-20 13:46:00,032 - utils - INFO - PDF Analysis: True (standard)
-2025-07-20 13:46:02,372 - utils - INFO - Processed with rule engine
-2025-07-20 13:46:02,375 - utils - INFO - Processing: C:\Users\jayra\Desktop\Adobe_hackathon\pdf-outline-extractor\test_data\file03.pdf
-2025-07-20 13:46:02,430 - utils - INFO - PDF Analysis: True (standard)
-2025-07-20 13:46:05,095 - utils - INFO - Processed with rule engine
-2025-07-20 13:46:05,101 - utils - INFO - Processing: C:\Users\jayra\Desktop\Adobe_hackathon\pdf-outline-extractor\test_data\file04.pdf
-2025-07-20 13:46:05,164 - utils - INFO - PDF Analysis: False (standard)
-2025-07-20 13:46:05,164 - utils - INFO - Loading ML engine...
-2025-07-20 13:46:05,245 - utils - INFO - Processed with ML engine
-2025-07-20 13:46:05,245 - utils - INFO - Processing: C:\Users\jayra\Desktop\Adobe_hackathon\pdf-outline-extractor\test_data\file05.pdf
-2025-07-20 13:46:05,268 - utils - INFO - PDF Analysis: False (standard)
-2025-07-20 13:46:05,287 - utils - INFO - Processed with ML engine
+2025-07-20 17:23:55,546 - utils - INFO - Processing: C:\Users\jayra\Desktop\Adobe_hackathon\pdf-outline-extractor\test_data\file01.pdf
+2025-07-20 17:23:55,558 - utils - INFO - PDF Analysis: True (standard)
+2025-07-20 17:23:55,674 - utils - INFO - Processed with rule engine
+2025-07-20 17:23:55,674 - utils - INFO - Processing: C:\Users\jayra\Desktop\Adobe_hackathon\pdf-outline-extractor\test_data\file02.pdf
+2025-07-20 17:23:55,709 - utils - INFO - PDF Analysis: True (standard)
+2025-07-20 17:23:56,621 - utils - INFO - Processed with rule engine
+2025-07-20 17:23:56,623 - utils - INFO - Processing: C:\Users\jayra\Desktop\Adobe_hackathon\pdf-outline-extractor\test_data\file03.pdf
+2025-07-20 17:23:56,662 - utils - INFO - PDF Analysis: True (standard)
+2025-07-20 17:23:57,723 - utils - INFO - Processed with rule engine
+2025-07-20 17:23:57,724 - utils - INFO - Processing: C:\Users\jayra\Desktop\Adobe_hackathon\pdf-outline-extractor\test_data\file04.pdf
+2025-07-20 17:23:57,763 - utils - INFO - PDF Analysis: False (standard)
+2025-07-20 17:23:57,764 - utils - INFO - Loading ML engine...
+2025-07-20 17:23:57,807 - utils - INFO - Processed with ML engine
+2025-07-20 17:23:57,808 - utils - INFO - Processing: C:\Users\jayra\Desktop\Adobe_hackathon\pdf-outline-extractor\test_data\file05.pdf
+2025-07-20 17:23:57,818 - utils - INFO - PDF Analysis: False (standard)
+2025-07-20 17:23:57,827 - utils - INFO - Processed with ML engine
