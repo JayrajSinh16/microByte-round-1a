@@ -211,23 +211,23 @@ def compare_files():
         
         print(f"\n📋 File-by-file breakdown:")
         for file_acc in file_accuracies:
-            status = "✅" if file_acc['overall_accuracy'] >= 0.8 else "⚠️" if file_acc['overall_accuracy'] >= 0.6 else "❌"
+            status = "✅" if file_acc['overall_accuracy'] >= 0.9 else "⚠️" if file_acc['overall_accuracy'] >= 0.6 else "❌"
             print(f"  {status} {file_acc['file']:10} - {file_acc['overall_accuracy']:.1%} (Title: {file_acc['title_accuracy']:.1%}, Outline: {file_acc['outline_accuracy']:.1%})")
         
         # Target assessment
-        target_met = avg_overall_accuracy >= 0.8
+        target_met = avg_overall_accuracy >= 0.9
         print(f"\n🎯 TARGET ASSESSMENT:")
-        print(f"   Target: 80% accuracy")
+        print(f"   Target: 90% accuracy")
         print(f"   Achieved: {avg_overall_accuracy:.1%}")
         if target_met:
             print("   ✅ TARGET MET!")
         else:
-            print(f"   ❌ Need {0.8 - avg_overall_accuracy:.1%} more to reach target")
-        
+            print(f"   ❌ Need {0.9 - avg_overall_accuracy:.1%} more to reach target")
+
         print(f"\n🔍 DETAILED ANALYSIS:")
-        if avg_title_accuracy < 0.8:
+        if avg_title_accuracy < 0.9:
             print("   📝 Title extraction needs improvement")
-        if avg_outline_accuracy < 0.8:
+        if avg_outline_accuracy < 0.9:
             print("   📋 Outline extraction needs improvement")
 
 if __name__ == "__main__":

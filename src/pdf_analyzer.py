@@ -110,12 +110,15 @@ class PDFAnalyzer:
     
     def _has_scattered_layout(self, metrics: Dict) -> bool:
         """Detect if document has scattered, unstructured layout"""
-        # High font variety relative to content suggests scattered layout
-        if len(metrics['font_variety']) > 4 and metrics['avg_text_blocks_per_page'] > 8:
-            return True
-            
-        # Wide range of font sizes suggests complex layout
-        if metrics['font_sizes']:
+        font_count = len(metrics['font_variety'])
+        avg_blocks = metrics['avg_text_blocks_per_page']
+        
+        # Key insight: Scattered layouts have LOW blocks per page because text is spread out
+        # Structured documents have HIGH blocks per page because they have organized content
+        
+        # True scattered layout: Wide font size variation with LOW block density
+        # This catches party invitations, flyers, scattered design documents
+        if metrics['font_sizes'] and avg_blocks < 15:  # Very low block density
             font_size_range = max(metrics['font_sizes']) - min(metrics['font_sizes'])
             if font_size_range > 15:  # Large variation in font sizes
                 return True
