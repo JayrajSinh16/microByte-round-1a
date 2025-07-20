@@ -2,8 +2,6 @@
 """
 Accuracy comparison between expected output and actual output
 """
-import os
-import sys
 import json
 from pathlib import Path
 import difflib

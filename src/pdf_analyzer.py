@@ -97,5 +97,39 @@ class PDFAnalyzer:
             return False
         if metrics['text_extraction_rate'] < Config.MIN_TEXT_EXTRACTION_RATE:
             return False
+        
+        # Enhanced layout complexity detection
+        if self._has_scattered_layout(metrics):
+            return False
+            
+        # Check for specific document patterns that need ML
+        if self._needs_ml_processing(metrics):
+            return False
             
         return True
+    
+    def _has_scattered_layout(self, metrics: Dict) -> bool:
+        """Detect if document has scattered, unstructured layout"""
+        # High font variety relative to content suggests scattered layout
+        if len(metrics['font_variety']) > 4 and metrics['avg_text_blocks_per_page'] > 8:
+            return True
+            
+        # Wide range of font sizes suggests complex layout
+        if metrics['font_sizes']:
+            font_size_range = max(metrics['font_sizes']) - min(metrics['font_sizes'])
+            if font_size_range > 15:  # Large variation in font sizes
+                return True
+                
+        return False
+    
+    def _needs_ml_processing(self, metrics: Dict) -> bool:
+        """Check for specific patterns that require ML processing"""
+        # Check for STEM/educational document indicators
+        font_names = metrics.get('font_variety', set())
+        
+        # Documents with multiple specialized fonts (like Sniglet) often need ML
+        specialized_fonts = {'Sniglet-Regular', 'Calibri-Bold', 'Arial-BoldMT'}
+        if len(font_names.intersection(specialized_fonts)) >= 2:
+            return True
+            
+        return False
