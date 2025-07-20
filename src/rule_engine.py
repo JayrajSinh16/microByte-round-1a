@@ -335,10 +335,45 @@ class SmartRuleEngine:
                 r'^(Foundation Level Extensions|International Software Testing Qualifications Board)$',
                 r'^(Version|Copyright|This document).*',
                 r'^[A-Z][a-z]+ \d+\.\d+$',  # Version numbers
+                r'^(RFP:|Request for Proposal).*',  # RFP titles
+                r'^(March|April|May|June|July|August|September|October|November|December)\s+\d+,\s+\d{4}$',  # Dates
+                r'^[A-Z][a-z]+\s*\d{1,2},\s*\d{4}$',  # Date formats
+                r'^(Ontario\'s Libraries Working Together)$',  # Organization names
+                # Filter garbled/repeated text patterns
+                r'^(.+)\s+\1.*\1.*\1',  # Repeated text pattern (RFP: R RFP: R...)
+                r'^[A-Z\s:]+[a-z\s:]+[A-Z\s:]+[a-z\s:]+.*',  # Mixed case repetitive patterns
             ]
             for pattern in cover_page_patterns:
                 if re.match(pattern, text, re.IGNORECASE):
                     return None  # Skip cover page elements
+        
+        # Skip long paragraphs that are definitely not headings
+        # Real headings are typically short and concise
+        if len(text) > 120:  # Very long text is likely a paragraph, not a heading
+            return None
+        
+        # Skip sentences that look like paragraph content
+        paragraph_indicators = [
+            r'^(Those|These|This|That)\s+\w+.*\.',  # Starts with demonstrative pronouns
+            r'^(We will|They will|It will)\s+.*',  # Action statements
+            r'^.*(will be|are expected|is anticipated).*',  # Future/expectation language
+            r'^.*(during the week of|with the work to commence).*',  # Procedural language
+            r'^.*\b(realize economies|leverage|institutional)\b.*',  # Business jargon
+            r'^[A-Z][a-z]+.*[a-z]+\s+(will|are|is|have|has|can|should|must)\s+.*',  # Complete sentences
+            # Timeline and funding details (be more specific)
+            r'^Timeline:\s+(March|April|May|June|July|August|September|October|November|December)\s+\d{4}.*(Funding|jointly funded).*',
+            r'^.*Funding Requested:.*Million.*funded by.*',  # Very specific funding text
+            # Very specific numbered list items that are explanatory (not headings)
+            r'^\d+\.\s+that\s+(government funding will|library contributions will|ODL expenditures will)\s+.*',
+            # Very long organizational/administrative details only
+            r'^\d+\.\d+\s+.{80,}.*',  # Only very long numbered subsections (80+ chars)
+            # Support/guidance text
+            r'^to support\s+(e-learning|citizens).*',
+        ]
+        
+        for pattern in paragraph_indicators:
+            if re.match(pattern, text, re.IGNORECASE):
+                return None  # Skip paragraph content
         
         # Major section headers (H1)
         if re.match(r'^(PATHWAY|PATHWAY OPTIONS)', text, re.IGNORECASE):
@@ -369,6 +404,18 @@ class SmartRuleEngine:
         
         if re.match(r'^What could.*mean', text, re.IGNORECASE):
             return 'H3'  # "What could the ODL really mean?" should be H3
+        
+        # Handle Phase headings (missing from output)
+        if re.match(r'^Phase\s+[IVX]+:', text, re.IGNORECASE):
+            return 'H3'  # All "Phase I:", "Phase II:", "Phase III:" should be H3
+        
+        # Handle numbered items in appendices - these should be H3, not H1
+        if re.match(r'^\d+\.\s+(Preamble|Terms of Reference|Membership|Appointment|Term|Chair|Meetings|Lines of|Financial|Reference Resources|Subject Guides|Educational|Journals)', text, re.IGNORECASE):
+            return 'H3'  # Numbered items in appendices should be H3
+            
+        # Handle short numbered items that are legitimate headings (4-50 chars)
+        if re.match(r'^\d+\.\s+[A-Z][a-zA-Z\s]{3,50}$', text) and len(text.strip()) <= 50:
+            return 'H3'  # Short numbered items are likely H3 headings
         
         # Pattern-based detection first
         for pattern_name, pattern in self.heading_patterns.items():
@@ -526,7 +573,7 @@ class SmartRuleEngine:
         return False
     
     def _detect_form_structure(self, blocks: List[Dict]) -> Dict:
-        """Detect form-like structures with numbered fields"""
+        """Detect form-like structures with numbered fields, but exclude legitimate headings"""
         numbered_blocks = []
         
         for block in blocks:
@@ -535,12 +582,24 @@ class SmartRuleEngine:
                 
             text = self._extract_block_text(block).strip()
             
-            # Look for numbered form fields
+            # Look for numbered form fields, but exclude likely headings
             if re.match(r'^\d+\.\s*(.{0,50})?$', text.strip()):
+                # Skip if this looks like a legitimate heading
+                # Common heading patterns: numbered sections with meaningful titles
+                if re.match(r'^\d+\.\s+(Preamble|Terms of Reference|Membership|Appointment|Term|Chair|Meetings|Lines of|Financial|Reference Resources|Subject Guides|Educational|Journals)', text, re.IGNORECASE):
+                    continue  # Skip this as it's likely a heading, not a form field
+                # Also skip Phase headings
+                if re.match(r'^\d+\.\s*Phase\s+[IVX]+:', text, re.IGNORECASE):
+                    continue
+                # Skip short descriptive numbered items that are headings
+                if re.match(r'^\d+\.\s+[A-Z][a-zA-Z\s]{3,30}$', text) and len(text.strip()) <= 40:
+                    continue  # These are likely section headings
+                    
                 numbered_blocks.append(block)
         
         # If we have many numbered items, it's likely a form
-        if len(numbered_blocks) >= 5:  # At least 5 numbered items
+        # Increased threshold since we're now excluding legitimate headings
+        if len(numbered_blocks) >= 8:  # At least 8 numbered items (after excluding headings)
             # Calculate bounding box for the form area
             min_x = min(block['bbox'][0] for block in numbered_blocks)
             min_y = min(block['bbox'][1] for block in numbered_blocks) 

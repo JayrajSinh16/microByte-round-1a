@@ -36,7 +36,22 @@ def test_single_file(input_file, output_file):
         return None
 
 if __name__ == "__main__":
-    input_file = "test_data/file01.pdf"
-    output_file = "output/file01_outline_test.json"
+    if len(sys.argv) > 1:
+        # Extract file number from argument (e.g., "file03" or "test_data/file03.pdf")
+        arg = sys.argv[1]
+        if "file" in arg:
+            if arg.startswith("test_data/"):
+                input_file = arg
+                file_num = arg.split("file")[1].split(".")[0]
+            else:
+                file_num = arg.replace("file", "")
+                input_file = f"test_data/file{file_num.zfill(2)}.pdf"
+        else:
+            file_num = arg.zfill(2)
+            input_file = f"test_data/file{file_num}.pdf"
+        output_file = f"output/file{file_num.zfill(2)}_outline_test.json"
+    else:
+        input_file = "test_data/file01.pdf"
+        output_file = "output/file01_outline_test.json"
     
     result = test_single_file(input_file, output_file)
