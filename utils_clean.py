@@ -72,5 +72,4 @@ class PerformanceOptimizer:
             
             return wrapper
         return decorator
-</content>
-</invoke>
+

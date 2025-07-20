@@ -1,24 +1,30 @@
-2025-07-19 19:28:28,099 - utils - INFO - Processing: C:\Users\jayra\Desktop\Adobe_hackathon\pdf-outline-extractor\test_data\file01.pdf
-2025-07-19 19:28:28,178 - utils - INFO - PDF Analysis: True (standard)
-2025-07-19 19:28:28,183 - utils - ERROR - Error processing C:\Users\jayra\Desktop\Adobe_hackathon\pdf-outline-extractor\test_data\file01.pdf: 'float' object is not subscriptable
-2025-07-19 19:38:21,360 - utils - INFO - Processing: C:\Users\jayra\Desktop\Adobe_hackathon\pdf-outline-extractor\test_data\file01.pdf
-2025-07-19 19:38:21,383 - utils - INFO - PDF Analysis: True (standard)
-2025-07-19 19:38:21,396 - utils - ERROR - Error processing C:\Users\jayra\Desktop\Adobe_hackathon\pdf-outline-extractor\test_data\file01.pdf: 'SmartRuleEngine' object has no attribute '_extract_title'
-2025-07-19 19:40:05,964 - utils - INFO - Processing: C:\Users\jayra\Desktop\Adobe_hackathon\pdf-outline-extractor\test_data\file01.pdf
-2025-07-19 19:40:05,990 - utils - INFO - PDF Analysis: True (standard)
-2025-07-19 19:40:06,012 - utils - INFO - Processed with rule engine
-2025-07-19 19:40:46,899 - utils - INFO - Processing: C:\Users\jayra\Desktop\Adobe_hackathon\pdf-outline-extractor\test_data\file01.pdf
-2025-07-19 19:40:46,925 - utils - INFO - PDF Analysis: True (standard)
-2025-07-19 19:40:46,944 - utils - INFO - Processed with rule engine
-2025-07-19 19:40:46,947 - utils - INFO - Processing: C:\Users\jayra\Desktop\Adobe_hackathon\pdf-outline-extractor\test_data\file02.pdf
-2025-07-19 19:40:47,050 - utils - INFO - PDF Analysis: True (standard)
-2025-07-19 19:40:47,340 - utils - INFO - Processed with rule engine
-2025-07-19 19:40:47,347 - utils - INFO - Processing: C:\Users\jayra\Desktop\Adobe_hackathon\pdf-outline-extractor\test_data\file03.pdf
-2025-07-19 19:40:47,433 - utils - INFO - PDF Analysis: True (standard)
-2025-07-19 19:40:47,579 - utils - INFO - Processed with rule engine
-2025-07-19 19:40:47,620 - utils - INFO - Processing: C:\Users\jayra\Desktop\Adobe_hackathon\pdf-outline-extractor\test_data\file04.pdf
-2025-07-19 19:40:47,721 - utils - INFO - PDF Analysis: True (standard)
-2025-07-19 19:40:47,858 - utils - INFO - Processed with rule engine
-2025-07-19 19:40:47,862 - utils - INFO - Processing: C:\Users\jayra\Desktop\Adobe_hackathon\pdf-outline-extractor\test_data\file05.pdf
-2025-07-19 19:40:47,904 - utils - INFO - PDF Analysis: True (standard)
-2025-07-19 19:40:47,924 - utils - INFO - Processed with rule engine
+2025-07-20 08:43:13,434 - utils - INFO - Processing: test_data/file03.pdf
+2025-07-20 08:43:13,637 - utils - INFO - PDF Analysis: True (standard)
+2025-07-20 08:43:13,780 - utils - INFO - Processed with rule engine
+2025-07-20 08:45:07,091 - utils - INFO - Processing: test_data/file03.pdf
+2025-07-20 08:45:07,158 - utils - INFO - PDF Analysis: True (standard)
+2025-07-20 08:45:07,287 - utils - INFO - Processed with rule engine
+2025-07-20 09:12:22,442 - utils - INFO - Processing: test_data/file03.pdf
+2025-07-20 09:12:22,502 - utils - INFO - PDF Analysis: True (standard)
+2025-07-20 09:12:25,237 - utils - INFO - Processed with rule engine
+2025-07-20 09:12:49,096 - utils - INFO - Processing: test_data/file01.pdf
+2025-07-20 09:12:49,162 - utils - INFO - PDF Analysis: True (standard)
+2025-07-20 09:12:49,502 - utils - INFO - Processed with rule engine
+2025-07-20 09:14:34,785 - utils - INFO - Processing: test_data/file01.pdf
+2025-07-20 09:14:34,815 - utils - INFO - PDF Analysis: True (standard)
+2025-07-20 09:14:35,132 - utils - INFO - Processed with rule engine
+2025-07-20 09:15:09,083 - utils - INFO - Processing: C:\Users\jayra\Desktop\Adobe_hackathon\pdf-outline-extractor\test_data\file01.pdf
+2025-07-20 09:15:09,112 - utils - INFO - PDF Analysis: True (standard)
+2025-07-20 09:15:09,412 - utils - INFO - Processed with rule engine
+2025-07-20 09:15:09,426 - utils - INFO - Processing: C:\Users\jayra\Desktop\Adobe_hackathon\pdf-outline-extractor\test_data\file02.pdf
+2025-07-20 09:15:09,556 - utils - INFO - PDF Analysis: True (standard)
+2025-07-20 09:15:11,862 - utils - INFO - Processed with rule engine
+2025-07-20 09:15:11,862 - utils - INFO - Processing: C:\Users\jayra\Desktop\Adobe_hackathon\pdf-outline-extractor\test_data\file03.pdf
+2025-07-20 09:15:11,921 - utils - INFO - PDF Analysis: True (standard)
+2025-07-20 09:15:14,545 - utils - INFO - Processed with rule engine
+2025-07-20 09:15:14,545 - utils - INFO - Processing: C:\Users\jayra\Desktop\Adobe_hackathon\pdf-outline-extractor\test_data\file04.pdf
+2025-07-20 09:15:14,614 - utils - INFO - PDF Analysis: True (standard)
+2025-07-20 09:15:15,313 - utils - INFO - Processed with rule engine
+2025-07-20 09:15:15,313 - utils - INFO - Processing: C:\Users\jayra\Desktop\Adobe_hackathon\pdf-outline-extractor\test_data\file05.pdf
+2025-07-20 09:15:15,385 - utils - INFO - PDF Analysis: True (standard)
+2025-07-20 09:15:15,444 - utils - INFO - Processed with rule engine

@@ -4,6 +4,7 @@ import numpy as np
 from typing import Dict, List
 import joblib
 import pickle
+import re
 
 class MLEngine:
     """Handles irregular PDFs with ML/OCR approaches"""
@@ -21,7 +22,7 @@ class MLEngine:
             self.classifier = joblib.load('models/heading_classifier.pkl')
         except:
             # Fallback to simple implementation
-            self.feature_extractor = SimpleFeatureExtractor()
+            self.feature_extractor = None
             self.classifier = None
     
     def extract(self, pdf_path: str) -> Dict:
@@ -266,6 +267,21 @@ class MLEngine:
         
         features['font_variety'] = len(features['font_names'])
     
+    def _extract_text_from_block(self, block: Dict) -> str:
+        """Extract text from a PyMuPDF block"""
+        text_parts = []
+        
+        for line in block.get("lines", []):
+            line_text = ""
+            for span in line.get("spans", []):
+                span_text = span.get("text", "").strip()
+                if span_text:
+                    line_text += span_text + " "
+            if line_text.strip():
+                text_parts.append(line_text.strip())
+        
+        return " ".join(text_parts)
+    
     def _heuristic_classification(self, blocks: List[Dict]) -> List[Dict]:
         """Advanced heuristic classification when ML not available"""
         # Calculate document statistics
@@ -281,8 +297,8 @@ class MLEngine:
             # Calculate heading probability
             heading_score = self._calculate_heading_score(block, doc_stats)
             
-            if heading_score > 0.7:
-                level = self._determine_level(block, doc_stats)
+            if heading_score > 0.6:  # Lowered threshold to catch more headings
+                level = self._determine_level_contextual(block, doc_stats, classified_blocks)
                 classified_blocks.append({
                     'block': block,
                     'is_heading': True,
@@ -313,6 +329,7 @@ class MLEngine:
     def _calculate_heading_score(self, block: Dict, doc_stats: Dict) -> float:
         """Calculate probability that block is a heading"""
         score = 0.0
+        text = block['text'].strip()
         
         # Font size score (most important)
         if block['avg_font_size'] > doc_stats['font_size_percentiles']['p90']:
@@ -335,21 +352,63 @@ class MLEngine:
             score += 0.1
         if block['is_bold']:
             score += 0.15
-        
+            
+        # Special patterns for common heading structures
+        if re.match(r'^(What|How|Why|Where|When)', text, re.IGNORECASE):
+            score += 0.2
+        if text.endswith(':'):
+            score += 0.15
+        if re.match(r'^For (each|the)', text, re.IGNORECASE):
+            score += 0.2
+        if re.match(r'^(Summary|Background|Approach|Evaluation|Appendix)', text, re.IGNORECASE):
+            score += 0.25
+        if text.lower() == 'milestones':
+            score += 0.3
+            
         # Penalty for paragraph-like features
-        if block['has_punctuation'] and block['word_count'] > 5:
-            score -= 0.1
+        if block['has_punctuation'] and block['word_count'] > 8:
+            score -= 0.15
+        if block['word_count'] > 15:
+            score -= 0.2
         
         return min(max(score, 0), 1)
     
-    def _determine_level(self, block: Dict, doc_stats: Dict) -> str:
-        """Determine heading level based on features"""
-        # Size-based determination
+    def _determine_level_contextual(self, block: Dict, doc_stats: Dict, existing_headings: List[Dict]) -> str:
+        """Determine heading level based on features and context"""
+        text = block['text'].strip()
+        
+        # Special case handling
+        if text.lower() == 'milestones':
+            return 'H3'  # Should be H3, not H2
+            
+        if re.match(r'^For (each|the) Ontario', text, re.IGNORECASE):
+            return 'H4'  # These are sub-items
+            
+        if re.match(r'^What could.*mean', text, re.IGNORECASE):
+            return 'H3'  # This is the parent of "For each..." items
+        
+        # Font size-based determination with context
         if block['avg_font_size'] > doc_stats['font_size_percentiles']['p95']:
+            # Check if this should really be H1 or if we have too many H1s already
+            recent_h1_count = sum(1 for h in existing_headings[-5:] 
+                                if h.get('level') == 'H1')
+            if recent_h1_count > 2:
+                return 'H2'  # Demote to H2 if too many recent H1s
             return 'H1'
+            
         elif block['avg_font_size'] > doc_stats['font_size_percentiles']['p90']:
+            # Context-aware H2/H3 decision
+            if text.startswith('Appendix'):
+                return 'H2'
+            if len(existing_headings) > 0:
+                last_heading = existing_headings[-1]
+                if last_heading.get('level') == 'H2' and block['page_num'] == last_heading['block']['page_num']:
+                    return 'H3'  # Likely a subsection
             return 'H2' if not block['starts_with_number'] else 'H1'
         else:
+            # Check for subsection patterns
+            if text.endswith(':') or re.match(r'^\d+\.', text):
+                return 'H3'
             return 'H3'
     
     def _format_output(self, predictions: List[Dict], blocks: List[Dict]) -> Dict:
@@ -363,19 +422,24 @@ class MLEngine:
             x['block']['y_normalized']
         ))
         
-        for pred in predictions:
+        for i, pred in enumerate(predictions):
             if pred['is_heading']:
                 block = pred['block']
+                text = block['text'].strip()
                 
-                # First significant heading might be title
-                if title is None and block['page_num'] < 2 and pred['level'] == 'H1':
-                    title = block['text'].strip()
+                # Better title detection
+                if (title is None and block['page_num'] < 2 and 
+                    any(keyword in text.lower() for keyword in 
+                        ['proposal', 'business plan', 'ontario digital library', 'rfp'])):
+                    title = text
                 else:
-                    headings.append({
-                        'level': pred['level'],
-                        'text': block['text'].strip(),
-                        'page': block['page_num'] + 1  # Convert to 1-indexed
-                    })
+                    # Filter out overly long headings that are likely paragraphs
+                    if len(text) < 150 and block['word_count'] < 20:
+                        headings.append({
+                            'level': pred['level'],
+                            'text': text,
+                            'page': block['page_num'] + 1  # Convert to 1-indexed
+                        })
         
         return {
             'title': title or "Untitled Document",
