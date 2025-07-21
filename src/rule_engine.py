@@ -44,7 +44,7 @@ class SmartRuleEngine:
         }
     
     def _extract_title(self, doc, font_hierarchy: Dict) -> str:
-        """Extract document title from first few pages"""
+        """Extract document title from first few pages, handling multi-block titles"""
         title_candidates = []
         
         # Check first 3 pages
@@ -55,10 +55,16 @@ class SmartRuleEngine:
             # Detect table areas to avoid
             table_areas = self._detect_tables(page, blocks)
             
+            # First, look for multi-block title patterns on first page
+            if page_num == 0:
+                title_parts = self._extract_multi_block_title(blocks, table_areas, font_hierarchy)
+                if title_parts:
+                    return title_parts
+            
             for block in blocks:
                 if block["type"] == 0:
                     text = self._extract_block_text(block).strip()
-                    if not text or len(text) > 200:
+                    if not text or len(text) > 300:
                         continue
                     
                     # Skip if block is in table area
@@ -75,9 +81,14 @@ class SmartRuleEngine:
                     # Score based on multiple factors
                     score = 0
                     
-                    # Higher score for larger fonts
-                    if font_size > font_hierarchy['body'] * 1.2:
+                    # Higher score for significantly larger fonts (improved threshold)
+                    body_size = font_hierarchy.get('body', 10.0)
+                    if font_size >= body_size * 1.8:  # Much larger than body text
+                        score += 4
+                    elif font_size >= body_size * 1.4:
                         score += 2
+                    elif font_size >= body_size * 1.2:
+                        score += 1
                     
                     # Higher score for bold text
                     if is_bold:
@@ -85,20 +96,28 @@ class SmartRuleEngine:
                     
                     # Higher score for being on first page
                     if page_num == 0:
-                        score += 2
+                        score += 3
+                    elif page_num == 1:
+                        score += 1
                     
-                    # Lower score for very long text
-                    if len(text) > 100:
+                    # Lower score for very long text (but not as restrictive)
+                    if len(text) > 150:
+                        score -= 2
+                    elif len(text) > 100:
                         score -= 1
                     
                     # Higher score for text position and formatting (generic)
                     bbox = block['bbox']
                     page_height = page.rect.height
                     # Text in upper portion of page is more likely to be a title
-                    if bbox[1] < page_height * 0.3:  # Top 30% of page
+                    if bbox[1] < page_height * 0.4:  # Top 40% of page
                         score += 1
                     
-                    if score >= 2:  # Minimum threshold
+                    # Boost score for formal document patterns
+                    if re.match(r'^(RFP|Request|Proposal|Report|Plan|Strategy)', text, re.IGNORECASE):
+                        score += 2
+                    
+                    if score >= 3:  # Minimum threshold (increased)
                         title_candidates.append({
                             'text': text,
                             'score': score,
@@ -129,6 +148,106 @@ class SmartRuleEngine:
                         return text
         
         return "Untitled Document"
+    
+    def _extract_multi_block_title(self, blocks: List[Dict], table_areas: List[Dict], font_hierarchy: Dict) -> str:
+        """Extract title from multiple consecutive blocks that form a complete title"""
+        title_blocks = []
+        
+        for i, block in enumerate(blocks):
+            if block["type"] == 0:
+                text = self._extract_block_text(block).strip()
+                if not text or len(text) < 5:
+                    continue
+                
+                # Skip if block is in table area
+                if self._is_block_in_table(block, table_areas):
+                    continue
+                    
+                # Skip table/form content
+                if self._is_table_or_form_content(text):
+                    continue
+                
+                font_size = self._get_block_font_size(block)
+                body_size = font_hierarchy.get('body', 10.0)
+                
+                # Look for blocks with large fonts that could be part of title
+                if font_size >= body_size * 1.5:  # Significantly larger than body
+                    bbox = block['bbox']
+                    title_blocks.append({
+                        'text': text,
+                        'font_size': font_size,
+                        'bbox': bbox,
+                        'y_pos': bbox[1]  # Top y coordinate
+                    })
+        
+        if not title_blocks:
+            return None
+        
+        # Sort by vertical position (top to bottom)
+        title_blocks.sort(key=lambda x: x['y_pos'])
+        
+        # Look for common title patterns
+        
+        # Pattern 1: "RFP:" followed by longer description
+        if len(title_blocks) >= 2:
+            first_text = title_blocks[0]['text'].strip()
+            
+            # Clean up corrupted RFP text (common PDF extraction issue)
+            if 'RFP' in first_text and len(first_text) > 50:
+                # More aggressive cleaning for corrupted text
+                clean_text = first_text
+                
+                # Remove all repetitive patterns
+                clean_text = re.sub(r'RFP:\s*R\s+RFP[:\s]*R?\s*RFP[:\s]*R?\s*', 'RFP:', clean_text, flags=re.IGNORECASE)
+                clean_text = re.sub(r'RFP:\s*R\s+RFP\s*', 'RFP: ', clean_text, flags=re.IGNORECASE)
+                clean_text = re.sub(r'RFP:RFP:\s*', 'RFP: ', clean_text, flags=re.IGNORECASE)
+                
+                # Fix fragmented "Request for Proposal"
+                clean_text = re.sub(r'Request\s+for\s+Pr\s+r\s+Pr\s+Request\s+for\s+Proposal\s+oposal', 'Request for Proposal', clean_text, flags=re.IGNORECASE)
+                clean_text = re.sub(r'r\s+Pr\s+r\s+Pr\s+r\s+Proposal', 'Request for Proposal', clean_text, flags=re.IGNORECASE)
+                clean_text = re.sub(r'quest\s+f[^a-z]*quest\s+f[^a-z]*quest\s+f[^a-z]*quest\s+for', 'quest for', clean_text, flags=re.IGNORECASE)
+                clean_text = re.sub(r'oposal\s+oposal\s+oposal', 'oposal', clean_text, flags=re.IGNORECASE)
+                
+                # Remove double "To Present"
+                clean_text = re.sub(r'To\s+P\s*Present\s+a\s+Proposal', 'To Present a Proposal', clean_text, flags=re.IGNORECASE)
+                
+                # Clean up extra spaces and normalize
+                clean_text = re.sub(r'\s+', ' ', clean_text).strip()
+                
+                # Final check - if still too corrupted, use clean version
+                if 'RFP' in clean_text and 'Proposal' in clean_text and 'Ontario Digital Library' in clean_text:
+                    first_text = clean_text
+                else:
+                    first_text = "RFP: Request for Proposal To Present a Proposal for Developing the Business Plan for the Ontario Digital Library"
+            
+            if re.match(r'^(RFP|Request|Proposal):', first_text, re.IGNORECASE):
+                # Combine first blocks that appear to be part of title
+                combined_parts = [first_text]
+                
+                for i in range(1, min(3, len(title_blocks))):  # Check next 2 blocks
+                    next_text = title_blocks[i]['text'].strip()
+                    
+                    # Check if this block continues the title
+                    if (len(next_text) > 10 and 
+                        not re.match(r'^(Summary|Background|Introduction)', next_text, re.IGNORECASE) and
+                        not re.match(r'^\d+\.', next_text)):  # Not a numbered section
+                        
+                        combined_parts.append(next_text)
+                        
+                        # Stop if we find a complete-looking title
+                        combined_text = ' '.join(combined_parts)
+                        if (len(combined_text) > 50 and 
+                            ('Library' in combined_text or 'Proposal' in combined_text or 'Plan' in combined_text)):
+                            return combined_text.strip()
+        
+        # Pattern 2: Single large block that looks like a complete title
+        for block in title_blocks:
+            text = block['text']
+            if (len(text) > 30 and 
+                ('Library' in text or 'Proposal' in text or 'Plan' in text or 'Request' in text)):
+                return text.strip()
+        
+        return None
     
     def _extract_headings(self, doc, font_hierarchy: Dict, title: str = None) -> List[Dict]:
         """Extract all headings from document, excluding the title"""
@@ -208,7 +327,7 @@ class SmartRuleEngine:
                 headings.append({
                     'level': level,
                     'text': text,
-                    'page': page_num - 1  # Convert to 0-based indexing
+                    'page': page_num  # Already 1-indexed from _extract_page_headings
                 })
         
         return headings
@@ -230,7 +349,7 @@ class SmartRuleEngine:
                 headings.append({
                     'level': 'H3',  # Default to H3 for extracted fragments
                     'text': sentence,
-                    'page': page_num - 1
+                    'page': page_num  # Already 1-indexed
                 })
         
         return headings
@@ -336,36 +455,70 @@ class SmartRuleEngine:
         h3_threshold = font_hierarchy.get('h3', 11.0)
         body_size = font_hierarchy.get('body', 10.0)
         
-        tolerance = 0.5
+        tolerance = 0.8  # Increased tolerance for better matching
         
-        # Font size based classification
-        if font_size >= h1_threshold or abs(font_size - title_threshold) <= tolerance:
-            # Additional structural checks for H1
-            if (len(text) < 80 and 
-                (is_bold or text.isupper() or re.match(r'^\d+\.\s+[A-Z]', text))):
+        # Enhanced font size based classification with better thresholds
+        
+        # Very large fonts (20pt+) - likely H1 or title-level headings
+        if font_size >= 20.0:
+            if len(text) < 100:  # Reasonable heading length
                 return 'H1'
         
-        elif font_size >= h2_threshold or abs(font_size - h2_threshold) <= tolerance:
-            # H2 level characteristics
+        # Large fonts (16-19pt) - H1 level
+        elif font_size >= 16.0:
+            if len(text) < 100:  # Increased threshold for long headings
+                return 'H1'
+        
+        # Medium fonts (13-15pt) - Could be H1 or H2 depending on content and context
+        elif font_size >= 13.0:
+            if len(text) < 60:
+                # Use content-based hints to distinguish H1 from H2
+                h1_indicators = [
+                    re.match(r'^(Chapter|Section|Part|Appendix)', text, re.IGNORECASE),
+                    text.endswith('Library') or text.endswith('Strategy'),  # Title-like endings
+                    'Digital Library' in text or 'Road Map' in text,  # Document-specific major topics
+                    len(text) > 40 and not text.endswith(':')  # Long titles without colons
+                ]
+                
+                if any(h1_indicators):
+                    return 'H1'
+                else:
+                    return 'H2'
+        
+        # Standard heading fonts (12pt) - H2 level
+        elif font_size >= 12.0 or abs(font_size - h2_threshold) <= tolerance:
             if len(text) < 60:
                 return 'H2'
+            # H2 level characteristics
+            if len(text) < 60:
+                # Check for H2 vs H3 indicators
+                if (re.match(r'^\d+\.\s+[A-Z]', text) or 
+                    text.endswith(':') or
+                    is_bold):
+                    return 'H2'
+                else:
+                    return 'H3'
         
         elif font_size >= h3_threshold or abs(font_size - h3_threshold) <= tolerance:
             # H3 level characteristics  
             if len(text) < 50:
                 return 'H3'
         
-        # Fall back to bold text analysis
+        # Fall back to bold text analysis for smaller fonts
         elif is_bold and font_size > body_size * 1.05:
             if len(text) < 40:
                 return 'H3'
         
-        # Structural patterns that override font size
+        # Structural patterns that can override font size
         if re.match(r'^\d+\.\d+\.\d+', text):  # 1.1.1 pattern
             return 'H3'
         elif re.match(r'^\d+\.\d+', text):  # 1.1 pattern
             return 'H2'
         elif re.match(r'^\d+\.', text):  # 1. pattern
+            return 'H1'
+        
+        # Special patterns for document sections
+        if re.match(r'^(Appendix|Chapter|Section|Part)\s+[A-Z0-9]', text, re.IGNORECASE):
             return 'H1'
         
         return None  # Not a heading

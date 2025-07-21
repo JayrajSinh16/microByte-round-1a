@@ -629,27 +629,46 @@ class FontHierarchyAnalyzer:
             'body': body_size
         }
         
-        # Assign hierarchy based on size and usage
+        # Assign hierarchy based on size and usage (improved for better detection)
         significant_fonts = [
             (font, stats) for font, stats in sorted_fonts 
-            if stats['count'] > 3 and font[0] > body_size
+            if stats['count'] >= 1 and font[0] > body_size * 1.1  # Lowered threshold for better detection
         ]
         
         if significant_fonts:
-            # Title: Largest font, usually on first pages
-            title_candidate = significant_fonts[0]
-            if (0 in title_candidate[1]['pages'] or 1 in title_candidate[1]['pages']):
-                hierarchy['title'] = title_candidate[0][0]
+            # Title: Largest font, usually on first pages, or very large fonts
+            title_candidates = [
+                f for f in significant_fonts 
+                if (0 in f[1]['pages'] or 1 in f[1]['pages']) and f[0][0] >= body_size * 1.5
+            ]
             
-            # Assign H1, H2, H3 based on size gaps
+            if title_candidates:
+                hierarchy['title'] = title_candidates[0][0][0]
+            
+            # Assign H1, H2, H3 based on size gaps (more aggressive)
             remaining = [f for f in significant_fonts if f[0][0] != hierarchy['title']]
             
-            if len(remaining) > 0:
-                hierarchy['h1'] = remaining[0][0][0]
-            if len(remaining) > 1:
-                hierarchy['h2'] = remaining[1][0][0]
-            if len(remaining) > 2:
-                hierarchy['h3'] = remaining[2][0][0]
+            # H1: Large fonts (15pt+) or fonts significantly larger than body
+            h1_candidates = [f for f in remaining if f[0][0] >= max(15.0, body_size * 1.4)]
+            if h1_candidates:
+                hierarchy['h1'] = h1_candidates[0][0][0]
+            
+            # H2: Medium fonts (12-14pt) or moderately larger than body
+            h2_candidates = [
+                f for f in remaining 
+                if f[0][0] != hierarchy['h1'] and f[0][0] >= max(12.0, body_size * 1.2)
+            ]
+            if h2_candidates:
+                hierarchy['h2'] = h2_candidates[0][0][0]
+            
+            # H3: Smaller heading fonts (11pt+) or slightly larger than body
+            h3_candidates = [
+                f for f in remaining 
+                if (f[0][0] != hierarchy['h1'] and f[0][0] != hierarchy['h2'] and 
+                    f[0][0] >= max(11.0, body_size * 1.1))
+            ]
+            if h3_candidates:
+                hierarchy['h3'] = h3_candidates[0][0][0]
         
         # Fill in missing values with defaults
         if hierarchy['title'] is None:
