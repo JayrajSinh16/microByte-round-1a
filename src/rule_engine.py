@@ -5,12 +5,17 @@ from typing import List, Dict, Tuple
 import numpy as np
 from collections import defaultdict
 from config import Config
+from shared_utils import (
+    PDFTextUtils, GeometricUtils, DocumentAnalysisUtils, 
+    TableDetectionUtils, TOCDetectionUtils, TextNormalizationUtils,
+    FontHierarchyAnalyzer, PatternMatchingUtils
+)
 
 class SmartRuleEngine:
     """High-performance rule-based heading extractor"""
     
     def __init__(self):
-        self.heading_patterns = self._compile_patterns()
+        self.heading_patterns = PatternMatchingUtils.compile_common_patterns()
         self.font_analyzer = FontHierarchyAnalyzer()
         
     def extract(self, pdf_path: str) -> Dict:
@@ -22,9 +27,9 @@ class SmartRuleEngine:
         # Phase 2: Detect document type early
         doc_type = self._detect_document_type(doc)
         
-        # Phase 3: Extract title (skip for party invitations)
-        if doc_type == 'party_invitation':
-            title = ""  # Party invitations should have empty title
+        # Phase 3: Extract title (skip for invitation-like documents)
+        if doc_type == 'invitation':
+            title = ""  # Invitations should have empty title to avoid extracting decorative text
         else:
             title = self._extract_title(doc, font_hierarchy)
         
@@ -38,20 +43,6 @@ class SmartRuleEngine:
             "outline": headings
         }
     
-    def _compile_patterns(self) -> Dict:
-        return {
-            'numbered_h1': re.compile(r'^(\d+\.?)\s+(.+)$'),
-            'numbered_h2': re.compile(r'^(\d+\.\d+\.?)\s+(.+)$'),
-            'numbered_h3': re.compile(r'^(\d+\.\d+\.\d+\.?)\s+(.+)$'),
-            'chapter': re.compile(r'^(Chapter|CHAPTER|Section|SECTION)\s+(\d+|[IVX]+)', re.I),
-            'keyword_h1': re.compile(r'^(Introduction|Conclusion|Abstract|References|Appendix)', re.I),
-            'keyword_h2': re.compile(r'^(Background|Methodology|Results|Discussion|Related Work|Summary)', re.I),
-            'keyword_h3': re.compile(r'^(Timeline|Milestones|Approach)', re.I),
-            'question_h3': re.compile(r'^(What|How|Why|Where|When).*\?', re.I),
-            'colon_ended': re.compile(r'^.+:$'),
-            'ontario_subsection': re.compile(r'^For (each|the) Ontario', re.I)
-        }
-
     def _extract_title(self, doc, font_hierarchy: Dict) -> str:
         """Extract document title from first few pages"""
         title_candidates = []
@@ -100,8 +91,11 @@ class SmartRuleEngine:
                     if len(text) > 100:
                         score -= 1
                     
-                    # Higher score for text that looks like a title
-                    if any(word.lower() in text.lower() for word in ['application', 'form', 'report', 'document']):
+                    # Higher score for text position and formatting (generic)
+                    bbox = block['bbox']
+                    page_height = page.rect.height
+                    # Text in upper portion of page is more likely to be a title
+                    if bbox[1] < page_height * 0.3:  # Top 30% of page
                         score += 1
                     
                     if score >= 2:  # Minimum threshold
@@ -156,43 +150,28 @@ class SmartRuleEngine:
     
     def _detect_document_type(self, doc) -> str:
         """Detect the type of document to apply specialized extraction rules"""
-        # Sample first few pages
-        sample_text = ""
-        for page_num in range(min(2, len(doc))):
-            sample_text += doc[page_num].get_text()
-        
-        sample_text = sample_text.upper()
-        
-        # Party invitation patterns
-        if any(pattern in sample_text for pattern in 
-               ['RSVP', 'PARTY', 'INVITATION', 'HOPE TO SEE YOU']):
-            return 'party_invitation'
-        
-        # STEM/Educational document patterns
-        if any(pattern in sample_text for pattern in 
-               ['PATHWAY', 'STEM', 'EDUCATIONAL', 'GOALS', 'INSPIRE']):
-            return 'educational'
-        
-        return 'general'
+        return DocumentAnalysisUtils.detect_document_type(doc)
     
     def _extract_page_headings(self, page, page_num: int, font_hierarchy: Dict, title: str = None, doc_type: str = 'general') -> List[Dict]:
-        """Extract headings from a single page"""
-        headings = []
+        """Extract headings from a single page using generic structure-based approach"""
         blocks = page.get_text("dict")["blocks"]
-        
-        # First, detect if page contains tables
-        table_areas = self._detect_tables(page, blocks)
         
         # Detect if this is a Table of Contents page
         if self._is_table_of_contents_page(page, blocks):
             # For TOC pages, only extract the "Table of Contents" heading itself
             return self._extract_toc_heading_only(blocks, page_num)
         
-        # Apply different extraction rules based on document type
-        if doc_type == 'party_invitation':
-            return self._extract_party_invitation_headings(blocks, page_num, title)
+        # Use generic structure-based extraction for all document types
+        return self._extract_generic_headings(blocks, page_num, font_hierarchy, title)
+
+    def _extract_generic_headings(self, blocks: List[Dict], page_num: int, font_hierarchy: Dict, title: str = None) -> List[Dict]:
+        """Generic heading extraction based on universal document structure principles"""
+        headings = []
         
-        for block_idx, block in enumerate(blocks):
+        # Detect table areas to avoid
+        table_areas = TableDetectionUtils.detect_tables(None, blocks) if blocks else []
+        
+        for block in blocks:
             if block["type"] != 0:  # Skip non-text blocks
                 continue
             
@@ -200,23 +179,7 @@ class SmartRuleEngine:
             if not text:
                 continue
             
-            # Handle very long blocks that might contain headings
-            if len(text) > 300:
-                # Try to extract potential headings from long blocks
-                potential_headings = self._extract_headings_from_long_block(text, page_num)
-                headings.extend(potential_headings)
-                continue
-            
-            # Handle medium-length blocks (100-300 chars) that might contain headings
-            elif len(text) > 100:
-                # Check if this block contains embedded headings
-                embedded_headings = self._extract_headings_from_long_block(text, page_num)
-                if embedded_headings:
-                    headings.extend(embedded_headings)
-                    continue
-                # If no embedded headings found, treat as regular block
-            
-            # Skip if this block is within a table area
+            # Skip if block is in table area
             if self._is_block_in_table(block, table_areas):
                 continue
                 
@@ -224,7 +187,7 @@ class SmartRuleEngine:
             if self._is_table_or_form_content(text):
                 continue
                 
-            # Skip Table of Contents entries (even if not on TOC page)
+            # Skip Table of Contents entries
             if self._is_toc_entry(text):
                 continue
                 
@@ -232,11 +195,12 @@ class SmartRuleEngine:
             if title and text.strip().lower() == title.strip().lower():
                 continue
             
+            # Extract font characteristics
             font_size = self._get_block_font_size(block)
             is_bold = self._is_block_bold(block)
             
-            # Determine heading level
-            level = self._determine_heading_level(
+            # Determine heading level using universal rules
+            level = self._determine_heading_level_generic(
                 text, font_size, is_bold, font_hierarchy, page_num
             )
             
@@ -249,175 +213,56 @@ class SmartRuleEngine:
         
         return headings
     
-    def _extract_party_invitation_headings(self, blocks: List[Dict], page_num: int, title: str = None) -> List[Dict]:
-        """Specialized extraction for party invitation documents"""
-        headings = []
-        
-        for block in blocks:
-            if block["type"] != 0:  # Skip non-text blocks
-                continue
-            
-            text = self._extract_block_text(block).strip()
-            if not text:
-                continue
-            
-            # For party invitations, we're very selective
-            # Only extract the "HOPE TO SEE YOU THERE!" type headings
-            if re.match(r'^(HOPE.*THERE)', text, re.IGNORECASE):
-                headings.append({
-                    'level': 'H1',
-                    'text': 'HOPE To SEE You THERE! ',  # Match expected format exactly
-                    'page': page_num - 1  # 0-based indexing
-                })
-            # Also check for embedded headings in longer blocks
-            elif len(text) > 50:
-                sentences = re.split(r'[.!]\s+', text)
-                for sentence in sentences:
-                    sentence = sentence.strip()
-                    if re.match(r'^(HOPE.*THERE)', sentence, re.IGNORECASE):
-                        headings.append({
-                            'level': 'H1',
-                            'text': 'HOPE To SEE You THERE! ',  # Match expected format exactly
-                            'page': page_num - 1  # 0-based indexing
-                        })
-                        break  # Only extract once
-        
-        return headings
-    
     def _extract_headings_from_long_block(self, text: str, page_num: int) -> List[Dict]:
-        """Extract potential headings from long text blocks"""
+        """Extract potential headings from long text blocks using generic patterns"""
         headings = []
         
-        # Split by sentences and look for heading patterns
-        sentences = re.split(r'[.!]\s+', text)
+        # Split by common sentence endings and look for heading patterns
+        sentences = re.split(r'[.!?]\s+', text)
         
         for sentence in sentences:
             sentence = sentence.strip()
-            if not sentence:
+            if not sentence or len(sentence) < 5:
                 continue
                 
-            # Look for specific patterns that might be headings
-            if re.match(r'^(HOPE.*THERE)', sentence, re.IGNORECASE):
+            # Use generic heading detection patterns
+            if self._looks_like_heading_fragment(sentence):
                 headings.append({
-                    'level': 'H1',
-                    'text': sentence + ('!' if not sentence.endswith('!') else ''),
-                    'page': page_num - 1  # Convert to 0-based indexing
-                })
-            elif (len(sentence) < 50 and 
-                  any(pattern in sentence.upper() for pattern in 
-                      ['PATHWAY', 'GOALS:', 'OBJECTIVES:'])):  # Removed ADDRESS: for now
-                headings.append({
-                    'level': 'H1',
+                    'level': 'H3',  # Default to H3 for extracted fragments
                     'text': sentence,
-                    'page': page_num - 1  # Convert to 0-based indexing
+                    'page': page_num - 1
                 })
         
         return headings
     
-    def _determine_heading_level(self, text: str, font_size: float, is_bold: bool, font_hierarchy: Dict, page_num: int = 1) -> str:
-        """Determine the heading level based on font properties and patterns"""
-        
-        # Special case patterns for specific content
-        if text.lower().strip() == 'milestones':
-            return 'H3'  # Should be H3, not H2
-        
-        # Enhanced pattern matching for better classification
-        
-        # Handle Chapter entries that are sub-content (should be skipped)
-        if re.match(r'^Chapter\s+\d+:', text, re.IGNORECASE):
-            # These are typically sub-content within other sections
-            # Based on expected output, they should be skipped entirely
-            return None  # Skip these entries
-        
-        # Skip cover page elements that are typically not headings
-        if page_num <= 1:  # First page or two
-            cover_page_patterns = [
-                r'^(Foundation Level Extensions|International Software Testing Qualifications Board)$',
-                r'^(Version|Copyright|This document).*',
-                r'^[A-Z][a-z]+ \d+\.\d+$',  # Version numbers
-                r'^(RFP:|Request for Proposal).*',  # RFP titles
-                r'^(March|April|May|June|July|August|September|October|November|December)\s+\d+,\s+\d{4}$',  # Dates
-                r'^[A-Z][a-z]+\s*\d{1,2},\s*\d{4}$',  # Date formats
-                r'^(Ontario\'s Libraries Working Together)$',  # Organization names
-                # Filter garbled/repeated text patterns
-                r'^(.+)\s+\1.*\1.*\1',  # Repeated text pattern (RFP: R RFP: R...)
-                r'^[A-Z\s:]+[a-z\s:]+[A-Z\s:]+[a-z\s:]+.*',  # Mixed case repetitive patterns
-            ]
-            for pattern in cover_page_patterns:
-                if re.match(pattern, text, re.IGNORECASE):
-                    return None  # Skip cover page elements
-        
-        # Skip long paragraphs that are definitely not headings
-        # Real headings are typically short and concise
-        if len(text) > 120:  # Very long text is likely a paragraph, not a heading
-            return None
-        
-        # Skip sentences that look like paragraph content
-        paragraph_indicators = [
-            r'^(Those|These|This|That)\s+\w+.*\.',  # Starts with demonstrative pronouns
-            r'^(We will|They will|It will)\s+.*',  # Action statements
-            r'^.*(will be|are expected|is anticipated).*',  # Future/expectation language
-            r'^.*(during the week of|with the work to commence).*',  # Procedural language
-            r'^.*\b(realize economies|leverage|institutional)\b.*',  # Business jargon
-            r'^[A-Z][a-z]+.*[a-z]+\s+(will|are|is|have|has|can|should|must)\s+.*',  # Complete sentences
-            # Timeline and funding details (be more specific)
-            r'^Timeline:\s+(March|April|May|June|July|August|September|October|November|December)\s+\d{4}.*(Funding|jointly funded).*',
-            r'^.*Funding Requested:.*Million.*funded by.*',  # Very specific funding text
-            # Very specific numbered list items that are explanatory (not headings)
-            r'^\d+\.\s+that\s+(government funding will|library contributions will|ODL expenditures will)\s+.*',
-            # Very long organizational/administrative details only
-            r'^\d+\.\d+\s+.{80,}.*',  # Only very long numbered subsections (80+ chars)
-            # Support/guidance text
-            r'^to support\s+(e-learning|citizens).*',
+    def _looks_like_heading_fragment(self, text: str) -> bool:
+        """Check if a text fragment looks like a heading using generic patterns"""
+        # Generic heading characteristics
+        if len(text) > 100:  # Too long to be a heading
+            return False
+            
+        # Structural patterns that indicate headings
+        heading_indicators = [
+            len(text) < 50 and text.isupper(),  # Short all-caps text
+            text.endswith(':') and len(text) < 30,  # Short colon-ended text
+            re.match(r'^[A-Z][a-z]+(\s+[A-Z][a-z]+)*$', text) and len(text) < 40,  # Title Case
+            re.match(r'^\d+\.?\s+[A-Z]', text),  # Numbered sections
+            re.match(r'^[A-Z][a-z]+\s+[IVX]+:', text),  # "Phase I:", "Chapter II:", etc.
+            re.match(r'^(What|How|Why|Where|When|Which)\s+', text),  # Question patterns
         ]
         
-        for pattern in paragraph_indicators:
-            if re.match(pattern, text, re.IGNORECASE):
-                return None  # Skip paragraph content
+        return any(heading_indicators)
+    
+    def _determine_heading_level_generic(self, text: str, font_size: float, is_bold: bool, font_hierarchy: Dict, page_num: int = 1) -> str:
+        """
+        Determine heading level using generic, universal document structure rules.
+        No hardcoded content-specific patterns - only structural and typographical analysis.
+        """
+        # Filter out non-heading content using universal patterns
+        if not self._is_potential_heading(text, page_num):
+            return None
         
-        # Major section headers (H1)
-        if re.match(r'^(PATHWAY|PATHWAY OPTIONS)', text, re.IGNORECASE):
-            return 'H1'
-        if re.match(r'^(Goals?:?|Objectives?:?)', text, re.IGNORECASE):
-            return 'H1' 
-        if re.match(r'^(HOPE.*THERE)', text, re.IGNORECASE):
-            return 'H1'  # "HOPE TO SEE YOU THERE!" should be H1
-            
-        # Subsection headers (H2)
-        if re.match(r'^(ADDRESS:?|LOCATION:?)', text, re.IGNORECASE):
-            return 'H2'
-            
-        # Skip very long address-like content (likely not headings)
-        if len(text) > 80 and any(pattern in text.upper() for pattern in 
-                                 ['STREET', 'AVENUE', 'DRIVE', 'ROAD', 'PARKWAY', 'TN', 'NEAR']):
-            return None  # Don't classify as heading
-            
-        # Skip form instructions or long procedural text
-        if (len(text) > 60 and 
-            any(pattern in text.upper() for pattern in 
-                ['PLEASE VISIT', 'FILL OUT', 'WAIVER', 'NOT ATTENDING'])):
-            return None  # Don't classify as heading
-        
-        # Original font-based logic
-        if re.match(r'^For (each|the) Ontario', text, re.IGNORECASE):
-            return 'H4'  # "For each Ontario..." items should be H4
-        
-        if re.match(r'^What could.*mean', text, re.IGNORECASE):
-            return 'H3'  # "What could the ODL really mean?" should be H3
-        
-        # Handle Phase headings (missing from output)
-        if re.match(r'^Phase\s+[IVX]+:', text, re.IGNORECASE):
-            return 'H3'  # All "Phase I:", "Phase II:", "Phase III:" should be H3
-        
-        # Handle numbered items in appendices - these should be H3, not H1
-        if re.match(r'^\d+\.\s+(Preamble|Terms of Reference|Membership|Appointment|Term|Chair|Meetings|Lines of|Financial|Reference Resources|Subject Guides|Educational|Journals)', text, re.IGNORECASE):
-            return 'H3'  # Numbered items in appendices should be H3
-            
-        # Handle short numbered items that are legitimate headings (4-50 chars)
-        if re.match(r'^\d+\.\s+[A-Z][a-zA-Z\s]{3,50}$', text) and len(text.strip()) <= 50:
-            return 'H3'  # Short numbered items are likely H3 headings
-        
-        # Pattern-based detection first
+        # Use the existing pattern-based detection from PatternMatchingUtils
         for pattern_name, pattern in self.heading_patterns.items():
             if pattern.search(text):
                 if 'numbered_h1' in pattern_name or 'chapter' in pattern_name:
@@ -430,397 +275,151 @@ class SmartRuleEngine:
                     return 'H1'
                 elif 'question_h3' in pattern_name:
                     return 'H3'
-                elif 'ontario_subsection' in pattern_name:
-                    return 'H4'
                 elif 'colon_ended' in pattern_name and len(text) < 50:
-                    return 'H3'  # Short colon-ended text likely heading
+                    return 'H3'
         
-        # Font-based detection
+        # Font-based hierarchical classification
+        return self._classify_by_font_hierarchy(text, font_size, is_bold, font_hierarchy)
+    
+    def _is_potential_heading(self, text: str, page_num: int) -> bool:
+        """
+        Universal filter to identify potential headings based on structural characteristics.
+        No content-specific hardcoded patterns.
+        """
+        # Length-based filtering
+        if len(text) > 150:  # Too long to be a typical heading
+            return False
+        
+        if len(text) < 3:  # Too short to be meaningful
+            return False
+        
+        # Universal non-heading patterns (structural, not content-specific)
+        non_heading_patterns = [
+            # Complete sentences (headings are typically phrases)
+            r'^[A-Z][a-z]+.*[a-z]+\s+(will|are|is|have|has|can|should|must|would|could)\s+.+\.$',
+            
+            # Procedural/instructional language (universal)
+            r'^(Please|Click|Visit|Fill|Complete|Submit|Download|Upload|Print|Sign)\s+',
+            
+            # Date patterns (universal)
+            r'^(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d+,?\s+\d{4}',
+            r'^\d{1,2}[/-]\d{1,2}[/-]\d{2,4}',
+            
+            # Version/copyright patterns (universal)
+            r'^(Version|Copyright|©|\(c\))\s+',
+            
+            # Address patterns (structural, not location-specific)
+            r'.*\d+.*\b(Street|St|Avenue|Ave|Drive|Dr|Road|Rd|Lane|Ln|Boulevard|Blvd)\b.*',
+            
+            # Email/URL patterns (universal)
+            r'.*@.*\.(com|org|net|edu|gov).*',
+            r'.*(http|www\.|\.com|\.org).*',
+            
+            # Long numeric sequences or codes
+            r'^\d{5,}.*',  # Long number sequences
+            
+            # Repeated text patterns (likely extraction artifacts)
+            r'^(.{3,})\s+\1',  # Text repeated twice
+        ]
+        
+        for pattern in non_heading_patterns:
+            if re.match(pattern, text, re.IGNORECASE):
+                return False
+        
+        return True
+    
+    def _classify_by_font_hierarchy(self, text: str, font_size: float, is_bold: bool, font_hierarchy: Dict) -> str:
+        """Classify heading level based on font characteristics and text structure"""
         title_threshold = font_hierarchy.get('title', 16.0)
         h1_threshold = font_hierarchy.get('h1', 14.0)
         h2_threshold = font_hierarchy.get('h2', 12.0)
         h3_threshold = font_hierarchy.get('h3', 11.0)
         body_size = font_hierarchy.get('body', 10.0)
         
-        # Size-based classification with tolerance
         tolerance = 0.5
         
-        if abs(font_size - title_threshold) <= tolerance and len(text) < 100:
-            return 'H1'  # Treat title as H1 in outline
-        elif abs(font_size - h1_threshold) <= tolerance or font_size >= h1_threshold:
-            return 'H1'
-        elif abs(font_size - h2_threshold) <= tolerance or font_size >= h2_threshold:
+        # Font size based classification
+        if font_size >= h1_threshold or abs(font_size - title_threshold) <= tolerance:
+            # Additional structural checks for H1
+            if (len(text) < 80 and 
+                (is_bold or text.isupper() or re.match(r'^\d+\.\s+[A-Z]', text))):
+                return 'H1'
+        
+        elif font_size >= h2_threshold or abs(font_size - h2_threshold) <= tolerance:
+            # H2 level characteristics
+            if len(text) < 60:
+                return 'H2'
+        
+        elif font_size >= h3_threshold or abs(font_size - h3_threshold) <= tolerance:
+            # H3 level characteristics  
+            if len(text) < 50:
+                return 'H3'
+        
+        # Fall back to bold text analysis
+        elif is_bold and font_size > body_size * 1.05:
+            if len(text) < 40:
+                return 'H3'
+        
+        # Structural patterns that override font size
+        if re.match(r'^\d+\.\d+\.\d+', text):  # 1.1.1 pattern
+            return 'H3'
+        elif re.match(r'^\d+\.\d+', text):  # 1.1 pattern
             return 'H2'
-        elif abs(font_size - h3_threshold) <= tolerance or font_size >= h3_threshold:
-            return 'H3'
-        elif is_bold and font_size > body_size:
-            return 'H3'
+        elif re.match(r'^\d+\.', text):  # 1. pattern
+            return 'H1'
         
         return None  # Not a heading
     
     def _extract_block_text(self, block) -> str:
         """Extract text from a block"""
-        text_parts = []
-        for line in block.get("lines", []):
-            line_text = ""
-            for span in line.get("spans", []):
-                line_text += span.get("text", "")
-            text_parts.append(line_text.strip())
-        return " ".join(text_parts).strip()
+        return PDFTextUtils.extract_block_text(block)
     
     def _get_block_font_size(self, block) -> float:
         """Get average font size for a block"""
-        sizes = []
-        for line in block.get("lines", []):
-            for span in line.get("spans", []):
-                sizes.append(span.get("size", 10.0))
-        return sum(sizes) / len(sizes) if sizes else 10.0
+        return PDFTextUtils.get_block_font_size(block)
     
     def _is_block_bold(self, block) -> bool:
         """Check if block text is bold"""
-        for line in block.get("lines", []):
-            for span in line.get("spans", []):
-                if span.get("flags", 0) & 16:  # Bold flag
-                    return True
-        return False
+        return PDFTextUtils.is_block_bold(block)
     
     def _validate_hierarchy(self, headings: List[Dict]) -> List[Dict]:
         """Ensure heading hierarchy is consistent"""
-        if not headings:
-            return headings
-        
-        # Simple validation - ensure we don't jump levels
-        validated = []
-        last_level = 0
-        
-        level_map = {'H1': 1, 'H2': 2, 'H3': 3, 'H4': 4}
-        
-        for heading in headings:
-            current_level = level_map.get(heading['level'], 1)
-            
-            # Don't allow skipping levels (H1 -> H3)
-            if current_level > last_level + 1:
-                heading['level'] = f"H{last_level + 1}"
-                current_level = last_level + 1
-            
-            validated.append(heading)
-            last_level = current_level
-        
-        return validated
+        return DocumentAnalysisUtils.validate_hierarchy(headings)
     
     def _detect_tables(self, page, blocks: List[Dict]) -> List[Dict]:
         """Detect table areas on the page"""
-        table_areas = []
-        
-        # Method 1: Look for table-like patterns in text blocks
-        for block in blocks:
-            if block["type"] != 0:
-                continue
-                
-            text = self._extract_block_text(block).strip()
-            
-            # Check if this looks like a table header/structure
-            if self._is_table_structure(text):
-                table_areas.append({
-                    'bbox': block['bbox'],
-                    'type': 'text_table',
-                    'confidence': 0.8
-                })
-        
-        # Method 2: Use PyMuPDF's table detection if available
-        try:
-            # Try to find tables using layout analysis
-            layout_tables = page.find_tables()
-            for table in layout_tables:
-                table_areas.append({
-                    'bbox': table.bbox,
-                    'type': 'detected_table', 
-                    'confidence': 0.9
-                })
-        except:
-            # Fallback: basic geometric detection
-            pass
-            
-        # Method 3: Detect form-like structures (multiple numbered items)
-        form_area = self._detect_form_structure(blocks)
-        if form_area:
-            table_areas.append(form_area)
-        
-        return table_areas
+        return TableDetectionUtils.detect_tables(page, blocks)
     
     def _is_table_structure(self, text: str) -> bool:
         """Check if text looks like table structure"""
-        # Common table headers and patterns
-        table_patterns = [
-            r'S\.?No\.?\s+(Name|Description|Item)',  # S.No Name Age etc
-            r'(Name|Item|Description)\s+(Age|Quantity|Amount)',
-            r'\d+\.\s+\d+\.\s+\d+\.',  # Multiple numbered items in sequence
-            r'(Name|Age|Relationship)\s+(Name|Age|Relationship)',  # Repeated headers
-        ]
-        
-        for pattern in table_patterns:
-            if re.search(pattern, text, re.IGNORECASE):
-                return True
-        
-        # Check for tabular data patterns
-        if re.search(r'S\.?No\.?\s+Name\s+Age\s+Relationship', text, re.IGNORECASE):
-            return True
-            
-        # Multiple numbers separated by periods/spaces (form fields)
-        if re.match(r'^\d+\.\s*\d+\.\s*\d+\.\s*\d+', text.strip()):
-            return True
-            
-        return False
+        return TableDetectionUtils.is_table_structure(text)
     
     def _detect_form_structure(self, blocks: List[Dict]) -> Dict:
-        """Detect form-like structures with numbered fields, but exclude legitimate headings"""
-        numbered_blocks = []
-        
-        for block in blocks:
-            if block["type"] != 0:
-                continue
-                
-            text = self._extract_block_text(block).strip()
-            
-            # Look for numbered form fields, but exclude likely headings
-            if re.match(r'^\d+\.\s*(.{0,50})?$', text.strip()):
-                # Skip if this looks like a legitimate heading
-                # Common heading patterns: numbered sections with meaningful titles
-                if re.match(r'^\d+\.\s+(Preamble|Terms of Reference|Membership|Appointment|Term|Chair|Meetings|Lines of|Financial|Reference Resources|Subject Guides|Educational|Journals)', text, re.IGNORECASE):
-                    continue  # Skip this as it's likely a heading, not a form field
-                # Also skip Phase headings
-                if re.match(r'^\d+\.\s*Phase\s+[IVX]+:', text, re.IGNORECASE):
-                    continue
-                # Skip short descriptive numbered items that are headings
-                if re.match(r'^\d+\.\s+[A-Z][a-zA-Z\s]{3,30}$', text) and len(text.strip()) <= 40:
-                    continue  # These are likely section headings
-                    
-                numbered_blocks.append(block)
-        
-        # If we have many numbered items, it's likely a form
-        # Increased threshold since we're now excluding legitimate headings
-        if len(numbered_blocks) >= 8:  # At least 8 numbered items (after excluding headings)
-            # Calculate bounding box for the form area
-            min_x = min(block['bbox'][0] for block in numbered_blocks)
-            min_y = min(block['bbox'][1] for block in numbered_blocks) 
-            max_x = max(block['bbox'][2] for block in numbered_blocks)
-            max_y = max(block['bbox'][3] for block in numbered_blocks)
-            
-            return {
-                'bbox': [min_x, min_y, max_x, max_y],
-                'type': 'form_structure',
-                'confidence': 0.7
-            }
-        
-        return None
+        """Detect form-like structures with numbered fields"""
+        return TableDetectionUtils.detect_form_structure(blocks)
     
     def _is_block_in_table(self, block: Dict, table_areas: List[Dict]) -> bool:
         """Check if a block overlaps with any table area"""
-        block_bbox = block['bbox']
-        
-        for table in table_areas:
-            if self._bboxes_overlap(block_bbox, table['bbox']):
-                return True
-        
-        return False
+        return GeometricUtils.is_block_in_table(block, table_areas)
     
     def _bboxes_overlap(self, bbox1: List, bbox2: List) -> bool:
         """Check if two bounding boxes overlap"""
-        return not (bbox1[2] <= bbox2[0] or bbox2[2] <= bbox1[0] or 
-                   bbox1[3] <= bbox2[1] or bbox2[3] <= bbox1[1])
+        return GeometricUtils.bboxes_overlap(bbox1, bbox2)
     
     def _is_table_or_form_content(self, text: str) -> bool:
         """Check if text is typical table or form content that should be ignored"""
-        # Skip single numbers or short numbered items
-        if re.match(r'^\d+\.?\s*$', text.strip()):
-            return True
-            
-        # Skip typical form field patterns
-        form_patterns = [
-            r'^\d+\.\s*(Name|Designation|PAY|Whether|Home Town|Amount)',
-            r'^S\.?No\.?\s+(Name|Age|Relationship)',
-            r'^\d+\.\s+\d+\.\s+\d+\.\s+\d+',  # Sequential numbers
-            r'^(Date|Signature)',
-            r'^Rs\.\s*$',  # Currency symbols
-        ]
-        
-        for pattern in form_patterns:
-            if re.search(pattern, text, re.IGNORECASE):
-                return True
-                
-        # Skip very short texts that are likely labels
-        if len(text.strip()) <= 2 and text.strip().isdigit():
-            return True
-            
-        # Skip single letters or very short words in numbered contexts
-        if re.match(r'^\d+\.\s*[A-Z]\.?\s*$', text.strip()):
-            return True
-            
-        return False
+        return TableDetectionUtils.is_table_or_form_content(text)
     
     def _is_table_of_contents_page(self, page, blocks: List[Dict]) -> bool:
         """Detect if this page is a Table of Contents"""
-        page_text = page.get_text().upper()
-        
-        # Look for "TABLE OF CONTENTS" heading
-        if "TABLE OF CONTENTS" in page_text:
-            return True
-        
-        # Look for patterns indicating TOC structure
-        toc_indicators = 0
-        
-        for block in blocks:
-            if block["type"] != 0:
-                continue
-                
-            text = self._extract_block_text(block).strip()
-            
-            # Check for typical TOC patterns
-            if self._is_toc_entry(text):
-                toc_indicators += 1
-        
-        # If we have many TOC-like entries, it's likely a TOC page
-        return toc_indicators >= 3
+        return TOCDetectionUtils.is_table_of_contents_page(page, blocks)
     
     def _is_toc_entry(self, text: str) -> bool:
         """Check if text looks like a table of contents entry"""
-        # Pattern 1: "1. Something 5" or "Chapter 1: Title 10"
-        if re.search(r'^(\d+\.|\d+\.\d+\.?|Chapter\s+\d+:?)\s+.+\s+\d+\s*$', text.strip()):
-            return True
-        
-        # Pattern 2: Multiple entries concatenated with page numbers
-        # e.g., "2.1 Intended Audience 7 2.2 Career Paths for Testers 7"
-        if re.search(r'\d+\.\d+\s+[^0-9]+\s+\d+\s+\d+\.\d+', text):
-            return True
-        
-        # Pattern 3: Text ending with just a number (page number)
-        if re.search(r'^.+\s+\d{1,3}\s*$', text.strip()) and len(text.strip()) > 10:
-            return True
-        
-        return False
+        return TOCDetectionUtils.is_toc_entry(text)
     
     def _extract_toc_heading_only(self, blocks: List[Dict], page_num: int) -> List[Dict]:
         """Extract only the 'Table of Contents' heading from TOC page"""
-        headings = []
-        
-        for block in blocks:
-            if block["type"] != 0:
-                continue
-                
-            text = self._extract_block_text(block).strip()
-            
-            # Only extract the "Table of Contents" heading itself
-            if re.match(r'^(Table of Contents|Contents|TOC)$', text, re.IGNORECASE):
-                headings.append({
-                    'level': 'H1',
-                    'text': text,
-                    'page': page_num - 1  # Convert to 0-based indexing
-                })
-                break  # Only extract the heading, skip all entries
-        
-        return headings
+        return TOCDetectionUtils.extract_toc_heading_only(blocks, page_num)
 
 
-class FontHierarchyAnalyzer:
-    """Statistical analysis of font usage in document"""
-    
-    def analyze(self, doc) -> Dict:
-        font_stats = defaultdict(lambda: {
-            'count': 0, 
-            'total_chars': 0, 
-            'pages': set(),
-            'is_bold': False,
-            'sample_texts': []
-        })
-        
-        # Collect font statistics
-        for page_num, page in enumerate(doc):
-            self._analyze_page_fonts(page, page_num, font_stats)
-        
-        # Determine hierarchy
-        hierarchy = self._determine_hierarchy(font_stats)
-        return hierarchy
-    
-    def _analyze_page_fonts(self, page, page_num: int, font_stats: Dict):
-        blocks = page.get_text("dict")["blocks"]
-        
-        for block in blocks:
-            if block["type"] == 0:  # Text block
-                for line in block["lines"]:
-                    for span in line["spans"]:
-                        font_key = (
-                            round(span["size"], 1),
-                            span["flags"]  # Bold, italic info
-                        )
-                        
-                        font_stats[font_key]['count'] += 1
-                        font_stats[font_key]['total_chars'] += len(span["text"])
-                        font_stats[font_key]['pages'].add(page_num)
-                        font_stats[font_key]['is_bold'] = bool(span["flags"] & 16)
-                        
-                        # Store samples for pattern analysis
-                        if len(font_stats[font_key]['sample_texts']) < 10:
-                            font_stats[font_key]['sample_texts'].append(span["text"].strip())
-    
-    def _determine_hierarchy(self, font_stats: Dict) -> Dict:
-        # Sort fonts by size
-        sorted_fonts = sorted(
-            font_stats.items(), 
-            key=lambda x: x[0][0], 
-            reverse=True
-        )
-        
-        if not sorted_fonts:
-            return {
-                'title': 16.0,
-                'h1': 14.0,
-                'h2': 12.0,
-                'h3': 11.0,
-                'body': 10.0
-            }
-        
-        # Filter out body text (most common)
-        body_font = max(font_stats.items(), key=lambda x: x[1]['total_chars'])
-        body_size = body_font[0][0]  # First element is font size
-        
-        hierarchy = {
-            'title': None,
-            'h1': None,
-            'h2': None,
-            'h3': None,
-            'body': body_size
-        }
-        
-        # Assign hierarchy based on size and usage
-        significant_fonts = [
-            (font, stats) for font, stats in sorted_fonts 
-            if stats['count'] > 3 and font[0] > body_size
-        ]
-        
-        if significant_fonts:
-            # Title: Largest font, usually on first pages
-            title_candidate = significant_fonts[0]
-            if (0 in title_candidate[1]['pages'] or 1 in title_candidate[1]['pages']):
-                hierarchy['title'] = title_candidate[0][0]
-            
-            # Assign H1, H2, H3 based on size gaps
-            remaining = [f for f in significant_fonts if f[0][0] != hierarchy['title']]
-            
-            if len(remaining) > 0:
-                hierarchy['h1'] = remaining[0][0][0]
-            if len(remaining) > 1:
-                hierarchy['h2'] = remaining[1][0][0]
-            if len(remaining) > 2:
-                hierarchy['h3'] = remaining[2][0][0]
-        
-        # Fill in missing values with defaults
-        if hierarchy['title'] is None:
-            hierarchy['title'] = body_size * 1.5
-        if hierarchy['h1'] is None:
-            hierarchy['h1'] = body_size * 1.3
-        if hierarchy['h2'] is None:
-            hierarchy['h2'] = body_size * 1.15
-        if hierarchy['h3'] is None:
-            hierarchy['h3'] = body_size * 1.1
-        
-        return hierarchy

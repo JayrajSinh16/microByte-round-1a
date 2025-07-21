@@ -1,23 +1,13 @@
 {
-  "title": "To Present a Proposal for Developing the Business Plan for the Ontario Digital Library",
+  "title": "Ontario’s Libraries Working Together",
   "outline": [
     {
       "level": "H1",
-      "text": "Ontario’s Digital Library",
-      "page": 1
-    },
-    {
-      "level": "H1",
-      "text": "A Critical Component for Implementing Ontario’s Road Map to Prosperity Strategy",
-      "page": 1
-    },
-    {
-      "level": "H2",
       "text": "Summary",
       "page": 1
     },
     {
-      "level": "H3",
+      "level": "H2",
       "text": "Timeline:",
       "page": 1
     },
@@ -82,28 +72,28 @@
       "page": 4
     },
     {
-      "level": "H4",
+      "level": "H3",
       "text": "For each Ontario citizen it could mean:",
       "page": 4
     },
     {
-      "level": "H4",
+      "level": "H3",
       "text": "For each Ontario student it could mean:",
       "page": 4
     },
     {
-      "level": "H4",
+      "level": "H3",
       "text": "For each Ontario library it could mean:",
       "page": 5
     },
     {
-      "level": "H4",
+      "level": "H3",
       "text": "For the Ontario government it could mean:",
       "page": 5
     },
     {
-      "level": "H2",
-      "text": "The Business Plan to be Developed",
+      "level": "H3",
+      "text": "Specifically, the business plan must include:",
       "page": 5
     },
     {
@@ -117,34 +107,29 @@
       "page": 6
     },
     {
-      "level": "H2",
-      "text": "Evaluation and Awarding of Contract",
-      "page": 7
-    },
-    {
       "level": "H1",
       "text": "Appendix A:  ODL Envisioned Phases & Funding",
       "page": 8
     },
     {
       "level": "H2",
-      "text": "Phase I:  Business Planning",
-      "page": 8
-    },
-    {
-      "level": "H3",
-      "text": "Phase II: Implementing and Transitioning",
-      "page": 8
-    },
-    {
-      "level": "H3",
-      "text": "Phase III: Operating and Growing the ODL",
+      "text": "Timeline: March 2003 – September 2003 Funding Requested: ~$100,000 jointly funded by stakeholder groups and the provincial government.",
       "page": 8
     },
     {
       "level": "H3",
       "text": "Timeline: January 2007 - Funding: $50 Million annually ($35 Million requested from government)",
       "page": 8
+    },
+    {
+      "level": "H1",
+      "text": "1. that ODL expenditures will increase by 50% over a 10 year period",
+      "page": 9
+    },
+    {
+      "level": "H1",
+      "text": "2. that government funding will decrease from 70% to 45% during that 10 year period",
+      "page": 9
     },
     {
       "level": "H1",
@@ -157,17 +142,17 @@
       "page": 10
     },
     {
-      "level": "H2",
+      "level": "H1",
       "text": "1. Preamble",
       "page": 10
     },
     {
-      "level": "H3",
+      "level": "H1",
       "text": "2. Terms of Reference",
       "page": 10
     },
     {
-      "level": "H3",
+      "level": "H1",
       "text": "3. Membership",
       "page": 10
     },
@@ -177,8 +162,18 @@
       "page": 10
     },
     {
-      "level": "H3",
+      "level": "H2",
+      "text": "3.5 Ontario Library Association representative (ex-officio)  ( OLA to appoint one representative )",
+      "page": 11
+    },
+    {
+      "level": "H1",
       "text": "4. Appointment Criteria and Process",
+      "page": 11
+    },
+    {
+      "level": "H2",
+      "text": "4.1 Groups and organizations named in Section 3 above are responsible for appointing up to two representatives to the Steering Committee.",
       "page": 11
     },
     {
@@ -187,32 +182,37 @@
       "page": 11
     },
     {
-      "level": "H3",
+      "level": "H1",
       "text": "5. Term",
       "page": 11
     },
     {
-      "level": "H3",
+      "level": "H1",
       "text": "6. Chair",
       "page": 11
     },
     {
-      "level": "H3",
+      "level": "H2",
       "text": "Role of the Chair:",
       "page": 11
     },
     {
-      "level": "H3",
+      "level": "H1",
       "text": "7. Meetings",
       "page": 11
     },
     {
-      "level": "H3",
+      "level": "H1",
       "text": "8. Lines of Accountability and Communication",
       "page": 11
     },
     {
-      "level": "H3",
+      "level": "H2",
+      "text": "8.1 The Steering Committee is accountable to the Province of Ontario, and to its business plan funders.",
+      "page": 11
+    },
+    {
+      "level": "H1",
       "text": "9. Financial and Administrative Policies",
       "page": 12
     },
@@ -222,22 +222,22 @@
       "page": 13
     },
     {
-      "level": "H2",
+      "level": "H1",
       "text": "1. Reference Resources",
       "page": 13
     },
     {
-      "level": "H3",
+      "level": "H1",
       "text": "2. Subject Guides",
       "page": 13
     },
     {
-      "level": "H3",
+      "level": "H1",
       "text": "3. Educational tool-kits",
       "page": 13
     },
     {
-      "level": "H3",
+      "level": "H1",
       "text": "4. Journals, books, maps, music etc.",
       "page": 13
     }

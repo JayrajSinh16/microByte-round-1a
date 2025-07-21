@@ -3,6 +3,11 @@
   "outline": [
     {
       "level": "H1",
+      "text": "Foundation Level Extensions",
+      "page": 0
+    },
+    {
+      "level": "H1",
       "text": "Revision History",
       "page": 2
     },
@@ -13,11 +18,6 @@
     },
     {
       "level": "H1",
-      "text": "Acknowledgements",
-      "page": 4
-    },
-    {
-      "level": "H2",
       "text": "1. Introduction to the Foundation Level Extensions",
       "page": 5
     },
@@ -72,7 +72,22 @@
       "page": 9
     },
     {
-      "level": "H3",
+      "level": "H1",
+      "text": "Chapter 1: Agile Software Development",
+      "page": 9
+    },
+    {
+      "level": "H1",
+      "text": "Chapter 2: Fundamental Agile Testing Principles, Practices, and Processes",
+      "page": 10
+    },
+    {
+      "level": "H1",
+      "text": "Chapter 3: Agile Testing Methods, Techniques, and Tools",
+      "page": 10
+    },
+    {
+      "level": "H1",
       "text": "4. References",
       "page": 11
     },
