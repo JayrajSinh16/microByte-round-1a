@@ -6,8 +6,8 @@ from pathlib import Path
 from typing import Dict
 
 from pdf_analyzer import PDFAnalyzer
-from rule_engine import SmartRuleEngine
-from ml_engine import MLEngine
+from src.rule_engine import SmartRuleEngine
+from src.ml_engine import MLEngine
 from utils import setup_logging, measure_time
 
 class PDFOutlineExtractor:
