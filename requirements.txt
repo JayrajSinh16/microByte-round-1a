@@ -1,8 +1,14 @@
 PyMuPDF
 numpy
-python-rapidjson
-regex
 scikit-learn
+scipy
 joblib
+pickle-mixin
+regex
+python-rapidjson
 Pillow
 pytesseract
+numba
+typing-extensions
+pathlib2
+colorlog

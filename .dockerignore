@@ -1,0 +1,53 @@
+# Git
+.git
+.gitignore
+
+# Python cache
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env
+pip-log.txt
+pip-delete-this-directory.txt
+.tox
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.log
+.DS_Store
+
+# Development files
+*.md
+README*
+test_data/
+tests/
+output/
+input/
+*.py.bak
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Old/unused files
+*_old.py
+*_clean.py
+check_output.py
+create_ml_models.py
+detailed_analysis.py
+final_test.py
+simple_test.py
+test_all.py
+utils_clean.py
+accuracy_check.py
+run_extraction.py
+view_results.py
+extraction.log
