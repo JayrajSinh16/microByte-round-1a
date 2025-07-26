@@ -133,19 +133,37 @@ def compare_files():
     overall_title_accuracy = 0
     overall_outline_accuracy = 0
     
-    # Get all expected files
-    expected_files = list(expected_dir.glob("file*.json"))
+    # Get all expected files (all .json files)
+    expected_files = list(expected_dir.glob("*.json"))
+    
+    print(f"📊 Found {len(expected_files)} expected output files to compare")
     
     for expected_file in expected_files:
-        file_base = expected_file.stem  # e.g., "file01"
-        actual_file = actual_dir / f"{file_base}_outline.json"
+        file_name = expected_file.name  # e.g., "file01.json" or "Breakfast Ideas.json"
+        file_base = expected_file.stem  # e.g., "file01" or "Breakfast Ideas"
         
-        print(f"\n📄 Comparing {file_base}.pdf:")
-        print("-" * 40)
+        # Try multiple patterns to find the corresponding actual file
+        potential_actual_files = [
+            actual_dir / file_name,  # Direct match: "Breakfast Ideas.json"
+            actual_dir / f"{file_base}_outline.json",  # For file01.json -> file01_outline.json
+            actual_dir / f"{file_base}.json"  # Fallback
+        ]
         
-        if not actual_file.exists():
-            print(f"❌ Actual output file not found: {actual_file}")
+        actual_file = None
+        for potential_file in potential_actual_files:
+            if potential_file.exists():
+                actual_file = potential_file
+                break
+        
+        print(f"\n📄 Comparing {file_name}:")
+        print("-" * 50)
+        
+        if actual_file is None:
+            print(f"❌ No matching actual output file found for {file_name}")
+            print(f"   Searched for: {[str(f.name) for f in potential_actual_files]}")
             continue
+        
+        print(f"✅ Found match: {actual_file.name}")
         
         try:
             # Load files
@@ -181,7 +199,7 @@ def compare_files():
             # Overall file accuracy (weighted average)
             file_accuracy = (title_accuracy * 0.3 + outline_result['accuracy'] * 0.7)
             file_accuracies.append({
-                'file': file_base,
+                'file': file_name,
                 'title_accuracy': title_accuracy,
                 'outline_accuracy': outline_result['accuracy'],
                 'overall_accuracy': file_accuracy
@@ -193,7 +211,9 @@ def compare_files():
             print(f"🎯 Overall File Accuracy: {file_accuracy:.1%}")
             
         except Exception as e:
-            print(f"❌ Error comparing {file_base}: {e}")
+            print(f"❌ Error comparing {file_name}: {e}")
+            import traceback
+            print(f"   Details: {traceback.format_exc()}")
     
     # Calculate overall statistics
     if file_accuracies:
@@ -205,6 +225,7 @@ def compare_files():
         print("\n" + "="*60)
         print("📊 OVERALL ACCURACY SUMMARY")
         print("="*60)
+        print(f"Files compared: {num_files}")
         print(f"Average Title Accuracy:   {avg_title_accuracy:.1%}")
         print(f"Average Outline Accuracy: {avg_outline_accuracy:.1%}")
         print(f"Average Overall Accuracy: {avg_overall_accuracy:.1%}")
@@ -212,7 +233,7 @@ def compare_files():
         print(f"\n📋 File-by-file breakdown:")
         for file_acc in file_accuracies:
             status = "✅" if file_acc['overall_accuracy'] >= 0.9 else "⚠️" if file_acc['overall_accuracy'] >= 0.6 else "❌"
-            print(f"  {status} {file_acc['file']:10} - {file_acc['overall_accuracy']:.1%} (Title: {file_acc['title_accuracy']:.1%}, Outline: {file_acc['outline_accuracy']:.1%})")
+            print(f"  {status} {file_acc['file'][:30]:32} - {file_acc['overall_accuracy']:.1%} (Title: {file_acc['title_accuracy']:.1%}, Outline: {file_acc['outline_accuracy']:.1%})")
         
         # Target assessment
         target_met = avg_overall_accuracy >= 0.9
@@ -229,6 +250,25 @@ def compare_files():
             print("   📝 Title extraction needs improvement")
         if avg_outline_accuracy < 0.9:
             print("   📋 Outline extraction needs improvement")
+    else:
+        print("\n❌ No files were successfully compared!")
+        print("   Check that output files exist for the expected files")
+        
+        # Show what files are available for debugging
+        print(f"\n🔍 DEBUG INFO:")
+        print(f"   Expected files found: {len(expected_files)}")
+        for ef in expected_files[:5]:  # Show first 5
+            print(f"     - {ef.name}")
+        if len(expected_files) > 5:
+            print(f"     ... and {len(expected_files) - 5} more")
+            
+        actual_files = list(actual_dir.glob("*.json"))
+        actual_files = [f for f in actual_files if f.parent.name != "expected_output"]  # Exclude expected_output subdir
+        print(f"   Actual files found: {len(actual_files)}")
+        for af in actual_files[:5]:  # Show first 5
+            print(f"     - {af.name}")
+        if len(actual_files) > 5:
+            print(f"     ... and {len(actual_files) - 5} more")
 
 if __name__ == "__main__":
     compare_files()
