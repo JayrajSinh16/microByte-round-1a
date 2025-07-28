@@ -317,33 +317,6 @@ result = extractor.process_pdf("complex_document.pdf")
 ```
 
 ---
-
-## 📊 **Performance Metrics & Validation**
-
-### **Benchmarking Results**
-
-| Metric | Value | Methodology |
-|--------|-------|-------------|
-| **Processing Speed** | 0.5s avg | Tested on 16 diverse PDFs |
-| **Overall Accuracy** | 64.3% | Comparison with expected outputs |
-| **Title Accuracy** | 49.5% | String similarity matching |
-| **Outline Accuracy** | 70.7% | Hierarchical structure comparison |
-| **Success Rate** | 95% | PDF processing without errors |
-| **Memory Usage** | <200MB | Per document processing |
-
-### **Accuracy Distribution**
-```
-📊 Performance Breakdown:
-├── Excellent (90%+ accuracy): 25% of files (4/16)
-├── Good (60-90% accuracy): 19% of files (3/16)  
-└── Needs Improvement (<60%): 56% of files (9/16)
-
-🎯 Target Files:
-✅ Academic papers: 90-100% accuracy
-✅ Technical documents: 75-85% accuracy  
-⚠️ Recipe/Content files: 40-60% accuracy (complex layouts)
-```
-
 ### **Validation & Testing**
 
 ```bash
@@ -530,58 +503,6 @@ docker logs $(docker ps -lq) 2>&1 | grep ERROR
 
 ---
 
-## 🚀 **Deployment & Scaling**
-
-### **Production Deployment**
-```yaml
-# docker-compose.yml
-version: '3.8'
-services:
-  pdf-extractor:
-    build: .
-    volumes:
-      - ./input:/app/input:ro
-      - ./output:/app/output
-    environment:
-      - LOG_LEVEL=INFO
-      - MAX_WORKERS=4
-    resources:
-      limits:
-        memory: 2G
-        cpus: '2.0'
-```
-
-### **Kubernetes Deployment**
-```yaml
-# k8s-deployment.yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: pdf-outline-extractor
-spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      app: pdf-extractor
-  template:
-    metadata:
-      labels:
-        app: pdf-extractor
-    spec:
-      containers:
-      - name: extractor
-        image: pdf-outline-extractor:latest
-        resources:
-          requests:
-            memory: "1Gi"
-            cpu: "500m"
-          limits:
-            memory: "2Gi"
-            cpu: "1000m"
-```
-
----
-
 ## 👥 **Team & Acknowledgments**
 
 ### **Adobe India Hackathon Round 1A Submission**
@@ -596,18 +517,6 @@ spec:
 🧠 **Hybrid Architecture**: Best-of-both-worlds approach combining speed and accuracy  
 🔄 **Adaptive Processing**: Multiple fallback strategies for maximum robustness  
 🐳 **Production Ready**: Complete containerization with enterprise-grade error handling  
-
----
-
-## 📈 **Future Roadmap**
-
-### **Round 1A → Round 2 Enhancements**
-- [ ] **Advanced ML Models**: Transformer-based heading detection
-- [ ] **Multi-language Support**: Enhanced Unicode and international text handling
-- [ ] **Real-time Processing**: WebSocket API for live document processing
-- [ ] **Enhanced Accuracy**: Improved algorithms targeting 90%+ accuracy
-- [ ] **Cloud Integration**: Adobe Cloud Services integration
-- [ ] **UI Dashboard**: Web interface for document management
 
 ---
 
