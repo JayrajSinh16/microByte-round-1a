@@ -8,29 +8,6 @@
 
 ---
 
-## 🏆 Round 1A Submission Overview
-
-This solution addresses the **PDF Outline Extraction Challenge** with a production-ready system that intelligently processes PDF documents to generate structured JSON outputs containing document titles and hierarchical outlines.
-
-### 🎯 **Challenge Requirements Met**
-- ✅ **Automated PDF Processing**: Batch processing of multiple PDF files
-- ✅ **Hierarchical Outline Extraction**: Multi-level heading detection (H1-H6)  
-- ✅ **JSON Output Format**: Structured results with title and outline arrays
-- ✅ **Docker Containerization**: Complete containerized solution for easy evaluation
-- ✅ **Performance Optimization**: Sub-second processing per document
-- ✅ **Error Handling**: Robust processing with graceful failure recovery
-
----
-
-## ✨ Key Innovation Features
-
-| Feature | Description | Impact |
-|---------|-------------|---------|
-| 🧠 **Intelligent Document Routing** | Automatic classification between standard and complex PDFs | 95%+ accuracy in document type detection |
-| ⚡ **Hybrid Processing Engine** | Rule-based engine for speed, ML engine for complexity | 0.3-0.8s processing time per document |
-| 📊 **Multi-Signal Analysis** | Font hierarchy + geometric patterns + content analysis | 64.3% overall accuracy across diverse documents |
-| 🔄 **Adaptive Fallback System** | Multiple processing strategies with graceful degradation | 95% success rate on diverse PDF formats |
-| 🐳 **Production-Ready Deployment** | Complete Docker containerization with optimized builds | Zero-configuration setup for judges |
 
 ---
 
@@ -161,54 +138,7 @@ def rule_based_extraction(pdf_path):
     return combine_extraction_signals()
 ```
 
-**Key Algorithms:**
-1. **Font Size Ratio Analysis**: Identifies heading levels by relative font sizes
-2. **Indentation Pattern Detection**: Recognizes hierarchical structure through spacing
-3. **Style Variation Recognition**: Detects bold, italic, and formatting cues
-4. **Page Number Validation**: Cross-references headings with page locations
 
-#### 🧠 **Phase 3: ML Engine** (Fallback Processing)
-**Optimized for:** Complex layouts, scanned PDFs, irregular structures
-
-```python
-def ml_based_extraction(pdf_path):
-    # Feature Engineering
-    features = extract_text_block_features()
-    
-    # Model Inference
-    predictions = heading_classifier.predict(features)
-    
-    # Post-processing
-    refined_results = apply_heuristic_refinement()
-    
-    return standardize_ml_output(refined_results)
-```
-
-**Advanced Features:**
-- **Multi-dimensional Feature Extraction**: Geometric, textual, and contextual features
-- **Pre-trained Classification Models**: Trained on diverse document corpora
-- **OCR Integration**: Tesseract OCR for scanned document processing
-- **Confidence-based Filtering**: Quality assurance through prediction confidence
-
-#### ✅ **Phase 4: Output Standardization**
-- Hierarchical consistency validation
-- Page number accuracy verification  
-- Duplicate heading removal
-- Level normalization (H1-H6 mapping)
-- JSON schema compliance
-
----
-
-## 📋 **Prerequisites & Setup**
-
-### **System Requirements**
-| Component | Minimum | Recommended |
-|-----------|---------|-------------|
-| **OS** | Linux, macOS, Windows | Ubuntu 20.04+ / macOS 12+ |
-| **Memory** | 2GB RAM | 4GB+ RAM |
-| **Storage** | 500MB free space | 1GB+ free space |
-| **Python** | 3.8+ | 3.11+ |
-| **Docker** | 20.10+ | 24.0+ |
 
 ### **Docker Setup** (Recommended for Round 1A)
 
@@ -279,42 +209,7 @@ docker run --rm \
   pdf-outline-extractor
 ```
 
-### **Custom Configuration**
 
-```python
-# src/config.py
-class Config:
-    # Processing thresholds
-    FONT_SIZE_THRESHOLD = 1.2
-    ML_CONFIDENCE_THRESHOLD = 0.7
-    MAX_OUTLINE_DEPTH = 6
-    
-    # Performance settings
-    MAX_PAGES_FOR_ANALYSIS = 10
-    ENABLE_CACHING = True
-    PARALLEL_PROCESSING = True
-    
-    # Output settings
-    INCLUDE_CONFIDENCE_SCORES = False
-    NORMALIZE_TEXT = True
-```
-
-### **Individual PDF Processing**
-
-```python
-from src.main import PDFOutlineExtractor
-
-# Initialize extractor
-extractor = PDFOutlineExtractor()
-
-# Process single PDF
-result = extractor.process_pdf("document.pdf")
-print(json.dumps(result, indent=2))
-
-# Custom processing with settings
-extractor.config.ML_CONFIDENCE_THRESHOLD = 0.9
-result = extractor.process_pdf("complex_document.pdf")
-```
 
 ---
 ### **Validation & Testing**
@@ -333,9 +228,6 @@ python tests/test_extraction.py --file input/test.pdf
 python -m memory_profiler run_extraction.py
 ```
 
----
-
-## 🔧 **Technical Deep Dive**
 
 ### **Technology Stack**
 
@@ -412,34 +304,7 @@ pdf-outline-extractor/
     └── benchmark.py              # Performance tests
 ```
 
----
 
-## 🎯 **Round 1A Evaluation Criteria**
-
-### **✅ Functional Requirements**
-- [x] **Input Processing**: Handles multiple PDF files from `/app/input`
-- [x] **Output Generation**: Produces JSON files in `/app/output`
-- [x] **Title Extraction**: Identifies document titles accurately
-- [x] **Outline Extraction**: Generates hierarchical heading structures
-- [x] **Page Mapping**: Associates headings with correct page numbers
-- [x] **Error Handling**: Graceful failure recovery and logging
-
-### **✅ Technical Requirements**  
-- [x] **Docker Containerization**: Complete containerized solution
-- [x] **JSON Schema Compliance**: Proper structure with title and outline arrays
-- [x] **Performance Optimization**: Sub-second processing per document
-- [x] **Scalability**: Efficient batch processing capabilities
-- [x] **Documentation**: Comprehensive setup and usage instructions
-- [x] **Code Quality**: Well-structured, maintainable codebase
-
-### **✅ Innovation Factors**
-- [x] **Hybrid Processing**: Novel combination of rule-based and ML approaches
-- [x] **Intelligent Routing**: Automatic processing strategy selection
-- [x] **Multi-Signal Analysis**: Font + geometric + content pattern fusion
-- [x] **Adaptive Fallbacks**: Multiple processing strategies for robustness
-- [x] **Production Readiness**: Enterprise-grade error handling and logging
-
----
 
 ## 🐛 **Troubleshooting & Support**
 
@@ -456,34 +321,8 @@ sudo chown -R $USER:$USER input output
 chmod 755 input output
 ```
 
-#### **📄 PDF Processing Issues**
-```bash
-# Issue: Empty output files
-# Check if PDFs contain extractable text
-python -c "
-import fitz
-doc = fitz.open('input/test.pdf')
-print(f'Pages: {len(doc)}')
-print(f'Text: {doc[0].get_text()[:100]}...')
-"
 
-# Issue: Low accuracy
-# Enable debug logging
-export LOG_LEVEL=DEBUG
-python run_extraction.py
-```
 
-#### **🧠 Performance Issues**
-```bash
-# Issue: Slow processing
-# Enable performance profiling
-python -m cProfile -o profile_output.prof run_extraction.py
-python -c "
-import pstats
-p = pstats.Stats('profile_output.prof')
-p.sort_stats('cumulative').print_stats(10)
-"
-```
 
 ### **Debug Commands**
 ```bash
@@ -501,47 +340,6 @@ docker run --rm -it pdf-outline-extractor /bin/bash
 docker logs $(docker ps -lq) 2>&1 | grep ERROR
 ```
 
----
-
-## 👥 **Team & Acknowledgments**
-
-### **Adobe India Hackathon Round 1A Submission**
-- **Challenge**: PDF Outline Extraction
-- **Solution**: Intelligent Hybrid Processing System
-- **Innovation**: Rule-based + ML hybrid architecture
-- **Focus**: Production-ready, scalable, accurate extraction
-
-### **Key Innovation Highlights**
-🎯 **Intelligent Document Classification**: 95%+ accuracy in routing decisions  
-⚡ **Performance Optimization**: Sub-second processing with intelligent caching  
-🧠 **Hybrid Architecture**: Best-of-both-worlds approach combining speed and accuracy  
-🔄 **Adaptive Processing**: Multiple fallback strategies for maximum robustness  
-🐳 **Production Ready**: Complete containerization with enterprise-grade error handling  
-
----
-
-## 📞 **Contact & Support**
-
-For Round 1A evaluation questions or technical support:
-
-📧 **Technical Issues**: [Repository Issues](https://github.com/JayrajSinh16/pdf_extractor/issues)  
-📚 **Documentation**: See inline code documentation and this README  
-🔧 **Setup Support**: Follow the quick start guide above  
-📊 **Performance Questions**: Check the metrics section and run accuracy_check.py  
-
----
-
-<div align="center">
-
-### 🏆 **Ready for Round 1A Evaluation**
-
-**Docker Command for Judges:**
-```bash
-docker build -t pdf-outline-extractor . && \
-docker run --rm -v "$(pwd)/input:/app/input" -v "$(pwd)/output:/app/output" pdf-outline-extractor
-```
-
-**Our hybrid approach delivers production-ready PDF outline extraction with intelligent processing, robust error handling, and enterprise-grade performance.** 
 
 *Built for Adobe India Hackathon 2025 Round 1A* 🎯
 
